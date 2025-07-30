@@ -3,7 +3,6 @@ module com.longfor.lmk.k8slogviewer {
     requires javafx.fxml;
 
     requires org.controlsfx.controls;
-    requires org.kordamp.ikonli.javafx;
     requires org.kordamp.bootstrapfx.core;
     requires client.java.api;
     requires client.java;

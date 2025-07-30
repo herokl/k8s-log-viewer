@@ -5,7 +5,6 @@ import com.longfor.lmk.k8slogviewer.controller.LogController;
 import com.longfor.lmk.k8slogviewer.util.InstanceUtils;
 import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.openapi.Configuration;
-import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.util.Config;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;

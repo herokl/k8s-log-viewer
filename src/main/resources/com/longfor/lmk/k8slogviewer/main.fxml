@@ -2,15 +2,19 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import javafx.geometry.Insets?>
-<?import javafx.scene.image.Image?>
-<?import javafx.scene.image.ImageView?>
-
 <?import javafx.collections.FXCollections?>
 <?import java.lang.String?>
+
 <SplitPane dividerPositions="0.3" fx:controller="com.longfor.lmk.k8slogviewer.controller.MainController" xmlns:fx="http://javafx.com/fxml">
     <!-- 左侧导航树 -->
     <VBox spacing="10" styleClass="navigation-panel">
         <padding><Insets top="15" right="15" bottom="15" left="15"/></padding>
+        <!-- 设置按钮 -->
+        <Button fx:id="settingsButton" styleClass="toolbar-button" onAction="#openSettings">
+            <tooltip>
+                <Tooltip text="设置"/>
+            </tooltip>
+        </Button>
         <!-- 导航树搜索 -->
         <HBox spacing="10" alignment="CENTER_LEFT">
             <TextField fx:id="treeSearchField" promptText="搜索命名空间/Pod/容器..." prefWidth="200"/>
@@ -44,19 +48,5 @@
 
         <!-- 日志显示区域 -->
         <TextArea fx:id="logArea" editable="false" wrapText="true" styleClass="log-area" VBox.vgrow="ALWAYS"/>
-
-        <!-- 右侧底部工具栏 -->
-        <ToolBar orientation="VERTICAL" styleClass="toolbar">
-            <Button fx:id="settingsButton" styleClass="toolbar-button" onAction="#openSettings">
-                <graphic>
-                    <ImageView>
-<!--                        <Image url="/com/longfor/lmk/k8slogviewer/icons/settings.png"/>-->
-                    </ImageView>
-                </graphic>
-                <tooltip>
-                    <Tooltip text="设置"/>
-                </tooltip>
-            </Button>
-        </ToolBar>
     </VBox>
 </SplitPane>
