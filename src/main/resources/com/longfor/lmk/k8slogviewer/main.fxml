@@ -38,8 +38,7 @@
                 <VBox spacing="5">
                     <!-- 第一行：搜索框、搜索类型、搜索按钮 -->
                     <HBox spacing="10" alignment="CENTER_LEFT">
-                        <TextArea fx:id="logSearchField" promptText="搜索日志..." prefWidth="300" prefHeight="50" wrapText="true"/>
-                        <ComboBox fx:id="searchType" prefWidth="120"/>
+                        <TextArea fx:id="logSearchField" promptText="搜索日志..." prefWidth="300" wrapText="true"/>
                         <Button fx:id="searchButton" text="搜索" styleClass="action-button"/>
                     </HBox>
                     <!-- 第二行：上下文行数、尾行数、暂停/恢复搜索、时间范围 -->
@@ -53,9 +52,7 @@
                     </HBox>
                 </VBox>
                 <ScrollPane fx:id="logScrollPane" fitToWidth="true" VBox.vgrow="ALWAYS">
-                    <content>
-                        <TextFlow fx:id="logArea" styleClass="log-area"/>
-                    </content>
+                    <TextFlow fx:id="logArea" styleClass="log-area"/>
                 </ScrollPane>
             </VBox>
         </SplitPane>

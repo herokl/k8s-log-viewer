@@ -9,6 +9,7 @@ module com.longfor.lmk.k8slogviewer {
     requires static lombok;
     requires org.slf4j;
     requires com.google.gson;
+    requires java.prefs;
 
     opens com.longfor.lmk.k8slogviewer to javafx.fxml;
     exports com.longfor.lmk.k8slogviewer;
