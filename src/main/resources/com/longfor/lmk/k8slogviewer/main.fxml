@@ -1,52 +1,63 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-<?import javafx.geometry.Insets?>
-<?import javafx.collections.FXCollections?>
-<?import java.lang.String?>
+<?import javafx.geometry.*?>
+<?import javafx.scene.text.TextFlow?>
 
-<SplitPane dividerPositions="0.3" fx:controller="com.longfor.lmk.k8slogviewer.controller.MainController" xmlns:fx="http://javafx.com/fxml">
-    <!-- 左侧导航树 -->
-    <VBox spacing="10" styleClass="navigation-panel">
-        <padding><Insets top="15" right="15" bottom="15" left="15"/></padding>
-        <!-- 设置按钮 -->
-        <Button fx:id="settingsButton" styleClass="toolbar-button" onAction="#openSettings">
-            <tooltip>
-                <Tooltip text="设置"/>
-            </tooltip>
-        </Button>
-        <!-- 导航树搜索 -->
-        <HBox spacing="10" alignment="CENTER_LEFT">
-            <TextField fx:id="treeSearchField" promptText="搜索命名空间/Pod/容器..." prefWidth="200"/>
-            <Button fx:id="treeSearchButton" text="搜索" styleClass="search-button" onAction="#searchTree"/>
-        </HBox>
-        <TreeView fx:id="navigationTree" minWidth="200" styleClass="navigation-tree" VBox.vgrow="ALWAYS"/>
-    </VBox>
+<BorderPane fx:id="root" style="-fx-font-family: 'Arial'; -fx-background-color: #f4f4f4;" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.longfor.lmk.k8slogviewer.controller.K8sLogController">
+    <!-- 左侧菜单 -->
+    <left>
+        <VBox style="-fx-background-color: #f4f4f4; -fx-min-width: 25px;" alignment="BOTTOM_LEFT" spacing="10" VBox.vgrow="ALWAYS">
+            <padding>
+                <Insets top="10" right="10" bottom="10" left="10"/>
+            </padding>
+            <Button fx:id="settingsButton" style="-fx-background-color: transparent; -fx-cursor: hand;"/>
+        </VBox>
+    </left>
 
-    <!-- 右侧日志面板 -->
-    <VBox spacing="10" styleClass="log-panel">
-        <padding><Insets top="15" right="15" bottom="15" left="15"/></padding>
+    <!-- 中间和右侧使用 SplitPane -->
+    <center>
+        <SplitPane dividerPositions="0.3" SplitPane.resizableWithParent="true">
+            <!-- 中间树视图 -->
+            <VBox spacing="10">
+                <padding>
+                    <Insets top="10" right="10" bottom="10" left="10"/>
+                </padding>
+                <HBox spacing="10">
+                    <TextField fx:id="searchField" promptText="搜索命名空间/Pod/容器..." HBox.hgrow="ALWAYS"/>
+                    <Button fx:id="refreshButton" text="刷新" styleClass="action-button"/>
+                </HBox>
+                <TreeView fx:id="treeView" styleClass="tree-view" VBox.vgrow="ALWAYS"/>
+            </VBox>
 
-        <!-- 日志搜索控制栏 -->
-        <HBox spacing="10" alignment="CENTER_LEFT">
-            <TextField fx:id="searchField" promptText="请输入日志搜索关键词..." prefWidth="300"/>
-            <ComboBox fx:id="searchModeCombo" value="模糊匹配">
-                <items>
-                    <FXCollections fx:factory="observableArrayList">
-                        <String fx:value="模糊匹配"/>
-                        <String fx:value="精确匹配"/>
-                        <String fx:value="正则表达式"/>
-                    </FXCollections>
-                </items>
-            </ComboBox>
-            <Button fx:id="searchButton" text="搜索" styleClass="search-button" onAction="#searchLogs"/>
-            <CheckBox fx:id="caseSensitiveCheck" text="区分大小写"/>
-        </HBox>
-
-        <!-- 暂停/恢复按钮 -->
-        <Button fx:id="pauseResumeButton" text="暂停" styleClass="pause-button" onAction="#togglePauseResume"/>
-
-        <!-- 日志显示区域 -->
-        <TextArea fx:id="logArea" editable="false" wrapText="true" styleClass="log-area" VBox.vgrow="ALWAYS"/>
-    </VBox>
-</SplitPane>
+            <!-- 右侧日志窗口 -->
+            <VBox styleClass="log-pane" spacing="10">
+                <padding>
+                    <Insets top="10" right="10" bottom="10" left="10"/>
+                </padding>
+                <VBox spacing="5">
+                    <!-- 第一行：搜索框、搜索类型、搜索按钮 -->
+                    <HBox spacing="10" alignment="CENTER_LEFT">
+                        <TextArea fx:id="logSearchField" promptText="搜索日志..." prefWidth="300" prefHeight="50" wrapText="true"/>
+                        <ComboBox fx:id="searchType" prefWidth="120"/>
+                        <Button fx:id="searchButton" text="搜索" styleClass="action-button"/>
+                    </HBox>
+                    <!-- 第二行：上下文行数、尾行数、暂停/恢复搜索、时间范围 -->
+                    <HBox spacing="10" alignment="CENTER_LEFT">
+                        <Label text="上下文行数:"/>
+                        <TextField fx:id="contextField" promptText="上下文行数" prefWidth="80"/>
+                        <Label text="尾行数:"/>
+                        <TextField fx:id="tailField" promptText="尾行数" prefWidth="80"/>
+                        <Button fx:id="searchToggleButton" text="暂停搜索" styleClass="action-button"/>
+                        <Button fx:id="timeRangeButton" text="时间范围" styleClass="action-button"/>
+                    </HBox>
+                </VBox>
+                <ScrollPane fx:id="logScrollPane" fitToWidth="true" VBox.vgrow="ALWAYS">
+                    <content>
+                        <TextFlow fx:id="logArea" styleClass="log-area"/>
+                    </content>
+                </ScrollPane>
+            </VBox>
+        </SplitPane>
+    </center>
+</BorderPane>

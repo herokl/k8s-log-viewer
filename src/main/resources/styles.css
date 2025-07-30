@@ -1,157 +1,67 @@
-/* 全局样式 */
+/* 根节点样式 */
 .root {
-    -fx-font-family: 'Segoe UI', 'PingFang SC', Arial, sans-serif;
-    -fx-background-color: #ffffff;
+    -fx-font-family: 'Arial';
+    -fx-background-color: #f4f4f4;
+    -fx-text-fill: black; /* 除日志外文字黑色 */
 }
 
-/* FontAwesome 字体（需下载并放入 resources/fonts/） */
-@font-face {
-    src: url("/com/longfor/lmk/k8slogviewer/fonts/fa-solid-900.woff2");
-    -fx-font-family: "FontAwesome";
-}
-
-/* 导航面板样式 */
-.navigation-panel {
-    -fx-background-color: #e8ecef;
-}
-
-/* 导航树样式 */
-.navigation-tree {
-    -fx-background-color: #e8ecef;
+/* 树视图样式 */
+.tree-view {
+    -fx-background-color: white;
     -fx-border-color: #d3d3d3;
-    -fx-border-width: 1;
-    -fx-font-size: 14px;
+    -fx-border-radius: 5px;
+    -fx-text-fill: black; /* 树视图文字黑色 */
 }
 
 /* 日志面板样式 */
-.log-panel {
-    -fx-background-color: #f5f5f5;
-}
-
-/* 日志区域样式 */
-.log-area {
-    -fx-background-color: #f8f9fa;
+.log-pane {
+    -fx-background-color: white;
     -fx-border-color: #d3d3d3;
-    -fx-border-width: 1;
-    -fx-padding: 10;
-    -fx-font-family: 'Monospaced';
-    -fx-font-size: 13px;
+    -fx-border-radius: 5px;
 }
 
-/* 搜索输入框样式 */
-.text-field {
-    -fx-background-color: #ffffff;
-    -fx-border-color: #d3d3d3;
-    -fx-border-radius: 5;
-    -fx-background-radius: 5;
-    -fx-padding: 5;
-}
-
-/* 搜索按钮样式 */
-.search-button {
+/* 按钮样式：绿色圆角 */
+.action-button {
     -fx-background-color: #4CAF50;
-    -fx-text-fill: white;
+    -fx-text-fill: white; /* 按钮文字黑色 */
     -fx-font-weight: bold;
-    -fx-padding: 5 15;
-    -fx-border-radius: 5;
     -fx-background-radius: 5;
 }
 
-/* 暂停按钮样式 */
-.pause-button {
-    -fx-background-color: #2196F3;
-    -fx-text-fill: white;
-    -fx-font-weight: bold;
-    -fx-padding: 5 15;
-    -fx-border-radius: 5;
-    -fx-background-radius: 5;
+/* 按钮悬停样式 */
+.action-button:hover {
+    -fx-background-color: #45a049;
 }
 
-/* 工具栏样式 */
-.toolbar {
-    -fx-background-color: #f5f5f5;
-    -fx-padding: 5;
-    -fx-spacing: 5;
-}
-
-/* 工具栏按钮样式 */
-.toolbar-button {
-    -fx-background-color: transparent;
-    -fx-padding: 5;
-    -fx-cursor: hand;
-}
-
-.toolbar-button:hover {
-    -fx-background-color: #e0e0e0;
-    -fx-background-radius: 5;
-}
-
-/* 浏览按钮样式 */
-.browse-button {
-    -fx-background-color: #2196F3;
-    -fx-text-fill: white;
-    -fx-font-weight: bold;
-    -fx-padding: 5 15;
-    -fx-border-radius: 5;
-    -fx-background-radius: 5;
-}
-
-/* 保存按钮样式 */
-.save-button {
-    -fx-background-color: #4CAF50;
-    -fx-text-fill: white;
-    -fx-font-weight: bold;
-    -fx-padding: 5 15;
-    -fx-border-radius: 5;
-    -fx-background-radius: 5;
-}
-
-/* 取消按钮样式 */
-.cancel-button {
-    -fx-background-color: #F44336;
-    -fx-text-fill: white;
-    -fx-font-weight: bold;
-    -fx-padding: 5 15;
-    -fx-border-radius: 5;
-    -fx-background-radius: 5;
-}
-
-/* 按钮悬停效果 */
-.button:hover {
-    -fx-opacity: 0.9;
-    -fx-cursor: hand;
-}
-
-/* 搜索模式下拉框样式 */
-.combo-box {
-    -fx-background-color: #ffffff;
-    -fx-border-color: #d3d3d3;
-    -fx-border-radius: 5;
-    -fx-background-radius: 5;
-}
-
-/* 搜索模式下拉框单元格样式 */
-.combo-box .list-cell {
-    -fx-padding: 5;
-    -fx-graphic-text-gap: 5;
-}
-
-/* 复选框样式 */
-.check-box .box {
-    -fx-background-color: #ffffff;
-    -fx-border-color: #d3d3d3;
-    -fx-border-radius: 2;
-}
-
-/* 标题标签样式 */
-.title-label {
-    -fx-font-size: 18px;
-    -fx-font-weight: bold;
-    -fx-text-fill: #333333;
-}
-
-/* 普通标签样式 */
+/* 标签样式 */
 .label {
+    -fx-text-fill: black; /* 标签文字黑色 */
+}
+
+/* 输入框样式 */
+.text-field, .combo-box {
+    -fx-text-fill: black; /* 输入框和下拉框文字黑色 */
+}
+
+/* 日志字体：Courier New，背景黑色，普通文字黑色 */
+.log-area, .text {
+    -fx-font-family: "Courier New";
     -fx-font-size: 14px;
-    -fx-text-fill: #333333;
+    -fx-background-color: white;
+    -fx-fill: black; /* 普通日志文字黑色 */
+}
+
+/* 日志高亮：黄色背景，文字白色 */
+.highlight {
+    -fx-background-color: black;
+    -fx-fill: white; /* 高亮文字白色 */
+    -fx-font-family: "Courier New";
+    -fx-font-size: 14px;
+}
+
+/* 加载中提示样式 */
+.loading-text {
+    -fx-fill: white;
+    -fx-font-family: "Courier New";
+    -fx-font-size: 14px;
 }
