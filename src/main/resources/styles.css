@@ -1,67 +1,43 @@
-/* 根节点样式 */
-.root {
-    -fx-font-family: 'Arial';
-    -fx-background-color: #f4f4f4;
-    -fx-text-fill: black; /* 除日志外文字黑色 */
-}
+/* style.css */
 
-/* 树视图样式 */
-.tree-view {
-    -fx-background-color: white;
-    -fx-border-color: #d3d3d3;
-    -fx-border-radius: 5px;
-    -fx-text-fill: black; /* 树视图文字黑色 */
-}
-
-/* 日志面板样式 */
-.log-pane {
-    -fx-background-color: white;
-    -fx-border-color: #d3d3d3;
-    -fx-border-radius: 5px;
-}
-
-/* 按钮样式：绿色圆角 */
 .action-button {
-    -fx-background-color: #4CAF50;
-    -fx-text-fill: white; /* 按钮文字黑色 */
+    -fx-background-color: #007bff;
+    -fx-text-fill: white;
     -fx-font-weight: bold;
-    -fx-background-radius: 5;
+    -fx-padding: 5 10;
+    -fx-border-radius: 3;
+    -fx-background-radius: 3;
+    -fx-cursor: hand;
 }
 
-/* 按钮悬停样式 */
 .action-button:hover {
-    -fx-background-color: #45a049;
+    -fx-background-color: #0056b3;
 }
 
-/* 标签样式 */
-.label {
-    -fx-text-fill: black; /* 标签文字黑色 */
+.tree-view {
+    -fx-border-color: #ddd;
+    -fx-border-width: 1px;
+    -fx-background-color: #ffffff;
 }
 
-/* 输入框样式 */
-.text-field, .combo-box {
-    -fx-text-fill: black; /* 输入框和下拉框文字黑色 */
+.log-pane {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #ddd;
+    -fx-border-width: 1px;
 }
 
-/* 日志字体：Courier New，背景黑色，普通文字黑色 */
-.log-area, .text {
-    -fx-font-family: "Courier New";
-    -fx-font-size: 14px;
-    -fx-background-color: white;
-    -fx-fill: black; /* 普通日志文字黑色 */
+.log-area {
+    -fx-background-color: #2b2b2b; /* 深色背景更适合日志 */
+    -fx-fill: #cccccc; /* 默认文本颜色 */
+    -fx-font-family: 'Consolas', 'Monospaced', monospace; /* 等宽字体更适合日志 */
+    -fx-font-size: 12px;
 }
 
-/* 日志高亮：黄色背景，文字白色 */
-.highlight {
-    -fx-background-color: white;
-    -fx-fill: red; /* 高亮文字白色 */
-    -fx-font-family: "Courier New";
-    -fx-font-size: 20px;
-}
-
-/* 加载中提示样式 */
-.loading-text {
-    -fx-fill: white;
-    -fx-font-family: "Courier New";
-    -fx-font-size: 14px;
+/* 关键字高亮样式 */
+.highlight-text {
+    -fx-fill: yellow; /* 高亮文本颜色 */
+    -fx-background-color: rgba(255, 255, 0, 0.3); /* 高亮背景色，带透明度 */
+    /* 或者只用背景色 */
+    /* -fx-fill: black; */
+    /* -fx-background-color: yellow; */
 }

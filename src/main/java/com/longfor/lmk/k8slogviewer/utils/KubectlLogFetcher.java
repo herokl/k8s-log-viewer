@@ -5,12 +5,16 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.net.URL;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 工具类：使用 Git 提供的 bash.exe 执行 kubectl 命令，支持上下文和时间过滤。
@@ -53,14 +57,56 @@ public class KubectlLogFetcher {
 
         return null;
     }
+    /**
+     * 调用 list-namespaces-pods.sh 脚本并返回解析后的 JsonNode
+     */
+    public JsonNode getNamespacePodTree() {
+        try {
+            // 1. 读取脚本资源
+            InputStream inputStream = getClass()
+                    .getResourceAsStream("/scripts/list-namespaces-pods.sh");
 
-    public static List<String> fetchLogWithContext(
+            if (inputStream == null) {
+                log.error("脚本资源未找到: scripts/list-namespaces-pods.sh");
+                return null;
+            }
+
+            // 2. 将脚本写入临时文件
+            Path tempScript = Files.createTempFile("list-namespaces-pods", ".sh");
+            Files.write(tempScript, inputStream.readAllBytes());
+            inputStream.close();
+
+            // 3. 设置执行权限
+            boolean b = tempScript.toFile().setExecutable(true);
+            log.info("设置权限成功: {}", b);
+
+            // 4. 执行脚本
+            ProcessBuilder builder = getProcessBuilder(tempScript.toAbsolutePath().toString());
+            Process process = builder.start();
+
+            String output = new BufferedReader(new InputStreamReader(process.getInputStream()))
+                    .lines().collect(Collectors.joining("\n"));
+
+            log.info("Shell 输出:\n{}", output);
+
+            ObjectMapper mapper = new ObjectMapper();
+            return mapper.readTree(output);
+
+        } catch (Exception e) {
+            log.error("执行脚本失败", e);
+            return null;
+        }
+    }
+
+
+    public static Object fetchLogWithContext(
             String namespace,
             String podName,
             String containerName,
             String keyword,
             int contextLines,
-            Integer sinceSeconds
+            Integer sinceSeconds,
+            boolean follow
     ) {
         List<String> result = new ArrayList<>();
         bashPath = resolveBashPath();
@@ -78,25 +124,20 @@ public class KubectlLogFetcher {
                 baseCmd += " --since=" + sinceSeconds + "s";
             }
 
+            if (follow) {
+                baseCmd += " --follow";
+            }
+
+
             String fullCmd = baseCmd;
             if (keyword != null && !keyword.isEmpty()) {
                 String safeKeyword = keyword.replace("\"", "\\\"").replace("$", "\\$");
-                fullCmd += " | grep -C " + contextLines + " \"" + safeKeyword + "\" | tail -n " + contextLines * 5;
-            } else {
-                fullCmd += " --tail=" + 100;
+                fullCmd += " | grep -C " + contextLines + " \"" + safeKeyword + "\"";
             }
 
             log.info("执行命令: {}", fullCmd); // 用于调试命令
 
-            String[] cmd = System.getProperty("os.name").toLowerCase().contains("win")
-                    ? new String[]{bashPath, "-c", fullCmd}
-                    : new String[]{"bash", "-c", fullCmd};
-
-            ProcessBuilder processBuilder = new ProcessBuilder(cmd).redirectErrorStream(true);
-            String kubeconfig = System.getProperty("KUBECONFIG");
-            if (kubeconfig != null) {
-                processBuilder.environment().put("KUBECONFIG", kubeconfig);
-            }
+            ProcessBuilder processBuilder = getProcessBuilder(fullCmd);
 
             Process process = processBuilder.start();
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
@@ -181,15 +222,7 @@ public class KubectlLogFetcher {
                 baseCmd += " --follow";
             }
 
-            String[] cmd = System.getProperty("os.name").toLowerCase().contains("win")
-                    ? new String[]{bashPath, "-c", baseCmd}
-                    : new String[]{"bash", "-c", baseCmd};
-
-            ProcessBuilder processBuilder = new ProcessBuilder(cmd).redirectErrorStream(true);
-            String kubeconfig = System.getProperty("KUBECONFIG");
-            if (kubeconfig != null) {
-                processBuilder.environment().put("KUBECONFIG", kubeconfig);
-            }
+            ProcessBuilder processBuilder = getProcessBuilder(baseCmd);
             log.info("执行命令: {}", baseCmd);
             Process process = processBuilder.start();
             if (follow) {
@@ -214,5 +247,18 @@ public class KubectlLogFetcher {
         }
 
         return result;
+    }
+
+    private static ProcessBuilder getProcessBuilder(String baseCmd) {
+        String[] cmd = System.getProperty("os.name").toLowerCase().contains("win")
+                ? new String[]{bashPath, "-c", baseCmd}
+                : new String[]{"bash", "-c", baseCmd};
+
+        ProcessBuilder processBuilder = new ProcessBuilder(cmd).redirectErrorStream(true);
+        String kubeconfig = AppConfig.getKubeConfigPath();
+        if (kubeconfig != null) {
+            processBuilder.environment().put("KUBECONFIG", kubeconfig);
+        }
+        return processBuilder;
     }
 }

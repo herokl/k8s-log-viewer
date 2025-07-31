@@ -10,6 +10,7 @@ module com.longfor.lmk.k8slogviewer {
     requires org.slf4j;
     requires com.google.gson;
     requires java.prefs;
+    requires com.fasterxml.jackson.databind;
 
     opens com.longfor.lmk.k8slogviewer to javafx.fxml;
     exports com.longfor.lmk.k8slogviewer;

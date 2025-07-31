@@ -2,6 +2,7 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import javafx.geometry.*?>
+<?import com.athaydes.logfx.ui.LogViewPane?>
 <?import javafx.scene.text.TextFlow?>
 
 <BorderPane fx:id="root" style="-fx-font-family: 'Arial'; -fx-background-color: #f4f4f4;" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.longfor.lmk.k8slogviewer.controller.K8sLogController">
@@ -38,8 +39,9 @@
                 <VBox spacing="5">
                     <!-- 第一行：搜索框、搜索类型、搜索按钮 -->
                     <HBox spacing="10" alignment="CENTER_LEFT">
-                        <TextArea fx:id="logSearchField" promptText="搜索日志..." prefWidth="300" wrapText="true"/>
-                        <Button fx:id="searchButton" text="搜索" styleClass="action-button"/>
+<!--                        <TextArea fx:id="logSearchField" promptText="搜索日志..." prefWidth="300" prefHeight="20" wrapText="true"/>-->
+                        <TextField fx:id="logSearchField" promptText="搜索日志..." HBox.hgrow="ALWAYS"/>
+                        <Button fx:id="searchButton" text="搜索" styleClass="action-button" onMouseClicked="#searchButtonClick"/>
                     </HBox>
                     <!-- 第二行：上下文行数、尾行数、暂停/恢复搜索、时间范围 -->
                     <HBox spacing="10" alignment="CENTER_LEFT">

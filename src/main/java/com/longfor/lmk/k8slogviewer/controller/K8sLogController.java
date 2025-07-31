@@ -11,31 +11,30 @@ import io.kubernetes.client.openapi.models.V1Pod;
 import io.kubernetes.client.util.Config;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.input.Clipboard;
-import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.List;
+import java.util.Objects;
+import java.util.Timer;
+import java.util.TimerTask;
 
-import javafx.collections.FXCollections;
-import javafx.geometry.Insets;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
+import static com.longfor.lmk.k8slogviewer.utils.CommonUtils.showAlert;
 
 public class K8sLogController {
 
@@ -50,7 +49,7 @@ public class K8sLogController {
     @FXML
     private Button settingsButton;
     @FXML
-    private TextArea logSearchField; // 改为 TextArea 支持换行
+    private TextField logSearchField; // 改为 TextArea 支持换行
     @FXML
     private TextField contextField; // 改为 TextField
     @FXML
@@ -118,7 +117,6 @@ public class K8sLogController {
             Platform.runLater(() -> showAlert("错误", "无法加载设置图标: " + e.getMessage()));
         }
 
-        logSearchField.setWrapText(false); // 支持换行
         contextField.setText(String.valueOf(contextLines));
         contextField.setPromptText("上下文行数");
         tailField.setText(String.valueOf(tailLines));
@@ -325,7 +323,7 @@ public class K8sLogController {
             return;
         }
         // 假设 keyword 是命令行搜索结果（kubectl logs | grep -C）
-        List<String> logs = KubectlLogFetcher.fetchLogWithContext(currentNamespace, currentPod, currentContainer, keyword, contextLines, sinceSeconds);
+        List<String> logs = (List<String>) KubectlLogFetcher.fetchLogWithContext(currentNamespace, currentPod, currentContainer, keyword, contextLines, sinceSeconds, false);
 
         Platform.runLater(() -> setLogs(logs));
 
@@ -543,11 +541,7 @@ public class K8sLogController {
     }
 
     // 显示警告对话框
-    private void showAlert(String title, String content) {
-        Alert alert = new Alert(Alert.AlertType.WARNING);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(content);
-        alert.showAndWait();
+
+    public void searchButtonClick(MouseEvent mouseEvent) {
     }
 }
