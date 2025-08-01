@@ -25,6 +25,7 @@ import javafx.scene.text.TextFlow;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import org.fxmisc.richtext.CodeArea;
 
 import java.io.File;
 import java.io.IOException;
@@ -41,7 +42,7 @@ public class K8sLogController {
     @FXML
     private TreeView<String> treeView;
     @FXML
-    private TextFlow logArea;
+    private CodeArea logArea;
     @FXML
     private TextField searchField;
     @FXML
@@ -336,12 +337,12 @@ public class K8sLogController {
     // 追加日志到 TextFlow（实际为全量覆盖前的填充）
     private void setLogs(List<String> logs) {
         if (logs.isEmpty()) return;
-        logArea.getChildren().clear();
-        for (String line : logs) {
-            if (!line.trim().isEmpty()) {
-                logArea.getChildren().add(new Text(line + "\n"));
-            }
-        }
+//        logArea.getChildren().clear();
+//        for (String line : logs) {
+//            if (!line.trim().isEmpty()) {
+//                logArea.getChildren().add(new Text(line + "\n"));
+//            }
+//        }
     }
 
     // 显示 Git Bash 路径设置页面

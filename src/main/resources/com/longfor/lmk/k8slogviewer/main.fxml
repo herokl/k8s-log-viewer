@@ -2,10 +2,8 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import javafx.geometry.*?>
-<?import com.athaydes.logfx.ui.LogViewPane?>
-<?import javafx.scene.text.TextFlow?>
-
-<BorderPane fx:id="root" style="-fx-font-family: 'Arial'; -fx-background-color: #f4f4f4;" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.longfor.lmk.k8slogviewer.controller.K8sLogController">
+<?import org.fxmisc.richtext.CodeArea?>
+<BorderPane fx:id="root" style="-fx-font-family: 'Arial'; -fx-background-color: #f4f4f4;" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.longfor.lmk.k8slogviewer.controller.K8sLogViewerController">
     <!-- 左侧菜单 -->
     <left>
         <VBox style="-fx-background-color: #f4f4f4; -fx-min-width: 25px;" alignment="BOTTOM_LEFT" spacing="10" VBox.vgrow="ALWAYS">
@@ -53,9 +51,7 @@
                         <Button fx:id="timeRangeButton" text="时间范围" styleClass="action-button"/>
                     </HBox>
                 </VBox>
-                <ScrollPane fx:id="logScrollPane" fitToWidth="true" VBox.vgrow="ALWAYS">
-                    <TextFlow fx:id="logArea" styleClass="log-area"/>
-                </ScrollPane>
+                <CodeArea fx:id="logArea" styleClass="log-area" VBox.vgrow="ALWAYS"/>
             </VBox>
         </SplitPane>
     </center>

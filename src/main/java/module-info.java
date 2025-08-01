@@ -11,6 +11,7 @@ module com.longfor.lmk.k8slogviewer {
     requires com.google.gson;
     requires java.prefs;
     requires com.fasterxml.jackson.databind;
+    requires org.fxmisc.richtext;
 
     opens com.longfor.lmk.k8slogviewer to javafx.fxml;
     exports com.longfor.lmk.k8slogviewer;

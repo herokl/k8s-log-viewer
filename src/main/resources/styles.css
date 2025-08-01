@@ -1,5 +1,26 @@
 /* style.css */
+.root {
+    -fx-font-family: 'Arial';
+    -fx-background-color: #f4f4f4;
+    -fx-text-fill: black;
+}
 
+/* 树视图样式 */
+.tree-view {
+    -fx-background-color: white;
+    -fx-border-color: #d3d3d3;
+    -fx-border-radius: 1px;
+    -fx-text-fill: black;
+}
+
+/* 日志面板样式 */
+.log-pane {
+    -fx-background-color: white;
+    -fx-border-color: #d3d3d3;
+    -fx-border-radius: 5px;
+}
+
+/* 按钮样式：绿色圆角 */
 .action-button {
     -fx-background-color: #007bff;
     -fx-text-fill: white;
@@ -14,10 +35,9 @@
     -fx-background-color: #0056b3;
 }
 
-.tree-view {
-    -fx-border-color: #ddd;
-    -fx-border-width: 1px;
-    -fx-background-color: #ffffff;
+/* 标签样式 */
+.label {
+    -fx-text-fill: black;
 }
 
 .log-pane {
@@ -26,18 +46,25 @@
     -fx-border-width: 1px;
 }
 
+/* 日志区域样式：Courier New，背景黑色，普通文字浅灰色 */
 .log-area {
-    -fx-background-color: #2b2b2b; /* 深色背景更适合日志 */
-    -fx-fill: #cccccc; /* 默认文本颜色 */
-    -fx-font-family: 'Consolas', 'Monospaced', monospace; /* 等宽字体更适合日志 */
+    -fx-font-family: "Courier New";
     -fx-font-size: 12px;
+    -fx-background-color: black;
+    -fx-text-fill: #D3D3D3; /* 普通日志文字浅灰色 */
 }
 
-/* 关键字高亮样式 */
-.highlight-text {
-    -fx-fill: yellow; /* 高亮文本颜色 */
-    -fx-background-color: rgba(255, 255, 0, 0.3); /* 高亮背景色，带透明度 */
-    /* 或者只用背景色 */
-    /* -fx-fill: black; */
-    /* -fx-background-color: yellow; */
+/* 日志高亮：黄色背景，文字白色 */
+.highlight {
+    -fx-background-color: yellow;
+    -fx-text-fill: white;
+    -fx-font-family: "Courier New";
+    -fx-font-size: 14px;
+}
+
+/* 加载中提示样式 */
+.loading-text {
+    -fx-text-fill: white;
+    -fx-font-family: "Courier New";
+    -fx-font-size: 14px;
 }

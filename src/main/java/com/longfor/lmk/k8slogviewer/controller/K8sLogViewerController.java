@@ -9,6 +9,7 @@ import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.text.TextFlow;
 import lombok.extern.slf4j.Slf4j;
+import org.fxmisc.richtext.CodeArea;
 
 import java.io.IOException;
 import java.util.Objects;
@@ -22,7 +23,7 @@ public class K8sLogViewerController {
     @FXML
     private TreeView<String> treeView;
     @FXML
-    private TextFlow logArea;
+    private CodeArea logArea;
     @FXML
     private TextField searchField;
     @FXML
@@ -30,7 +31,7 @@ public class K8sLogViewerController {
     @FXML
     private Button settingsButton;
     @FXML
-    private TextArea logSearchField; // 改为 TextArea 支持换行
+    private TextField logSearchField;
     @FXML
     private TextField contextField; // 改为 TextField
     @FXML
@@ -81,6 +82,10 @@ public class K8sLogViewerController {
         searchToggleButton.setText("暂停");
         searchButton.setText("搜索");
         searchButton.getStyleClass().add("action-button");
+        //初始化日志样式
+        // 初始化 CodeArea
+        logArea.setEditable(false);
+        logArea.getStyleClass().add("log-area");
 
         // 上下文行数监听器 校验
         contextField.textProperty().addListener((obs, oldVal, newVal) -> {
@@ -114,11 +119,7 @@ public class K8sLogViewerController {
         }
     }
 
-    @FXML
-    public void onRefresh() throws IOException {
+    public void searchButtonClick(MouseEvent mouseEvent) {
+        // TODO document why this method is empty
     }
-    @FXML
-    public void searchButton() throws IOException {
-    }
-
 }
