@@ -1,13 +1,14 @@
 package com.longfor.lmk.k8slogviewer.controller;
 
+import com.longfor.lmk.k8slogviewer.config.AppConfig;
 import com.longfor.lmk.k8slogviewer.config.K8sQuery;
+import com.longfor.lmk.k8slogviewer.utils.CommonUtils;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
-import javafx.scene.text.TextFlow;
 import lombok.extern.slf4j.Slf4j;
 import org.fxmisc.richtext.CodeArea;
 
@@ -20,6 +21,7 @@ import static com.longfor.lmk.k8slogviewer.utils.CommonUtils.showAlert;
 @Slf4j
 public class K8sLogViewerController {
     private static final K8sQuery K8S_QUERY = new K8sQuery();
+    public ProgressIndicator loadingIndicator;
     @FXML
     private TreeView<String> treeView;
     @FXML
@@ -64,8 +66,8 @@ public class K8sLogViewerController {
         // 设置 左侧设置图标
         try {
             ImageView icon = new ImageView(new Image(Objects.requireNonNull(getClass().getResourceAsStream("/com/longfor/lmk/k8slogviewer/icons/settings.png"))));
-            icon.setFitHeight(24);
-            icon.setFitWidth(24);
+            icon.setFitHeight(20);
+            icon.setFitWidth(20);
             settingsButton.setGraphic(icon);
         } catch (Exception e) {
             Platform.runLater(() -> showAlert("错误", "无法加载设置图标: " + e.getMessage()));
@@ -105,9 +107,39 @@ public class K8sLogViewerController {
                 K8S_QUERY.setTailLines(Integer.parseInt(newVal));
             }
         });
+        searchField.textProperty().addListener((obs, oldVal, newVal) -> refreshTree(newVal));
         // 设置树视图单击事件
         treeView.setOnMouseClicked(this::handleTreeViewClick);
+
+        // 树节点选择事件
+        treeView.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal != null && newVal.getParent() != null) {
+                TreeItem<String> parent = newVal.getParent();
+                if (parent.getParent() != null) {
+                    K8S_QUERY.setNamespace(newVal.getValue());
+                    K8S_QUERY.setPodName(newVal.getValue());
+                }
+            }
+        });
+
+        // 初始加载树
+        refreshTree(null);
     }
+
+    private void refreshTree(String filter) {
+        TreeItem<String> rootItem = AppConfig.getRootItem();
+        if (filter == null || filter.isEmpty()) {
+            setTreeRoot(rootItem);
+            return;
+        }
+        TreeItem<String> treeItem = CommonUtils.filterTree(rootItem, filter);
+        setTreeRoot(treeItem);
+    }
+
+    private void setTreeRoot(TreeItem<String> rootItem) {
+        Platform.runLater(() -> treeView.setRoot(rootItem));
+    }
+
 
     // 处理树视图单击事件
     private void handleTreeViewClick(MouseEvent event) {
@@ -119,7 +151,60 @@ public class K8sLogViewerController {
         }
     }
 
+    @FXML
     public void searchButtonClick(MouseEvent mouseEvent) {
-        // TODO document why this method is empty
+    }
+
+    @FXML
+    public void handleOpenSettings(MouseEvent mouseEvent) {
+        SettingsController settingDialog = new SettingsController();
+        try {
+            settingDialog.openSettingsDialog();
+        } catch (IOException e) {
+            Platform.runLater(() -> showAlert("错误", "无法加载设置窗口: " + e.getMessage()));
+        }
+//        try {
+//            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/longfor/lmk/k8slogviewer/settings_dialog.fxml"));
+//            DialogPane dialogPane = loader.load();
+//
+//            Dialog<ButtonType> dialog = new Dialog<>();
+//            dialog.setTitle("设置");
+//            dialog.setDialogPane(dialogPane);
+//            dialog.initOwner(AppConfig.getMainStage()); // 指定主窗口作为 owner
+//            dialog.initModality(Modality.APPLICATION_MODAL);
+//
+//            Optional<ButtonType> result = dialog.showAndWait();
+//            if (result.isPresent() && result.get().getButtonData() == ButtonBar.ButtonData.OK_DONE) {
+//                // 用户点击了“保存”按钮
+//                log.info("设置保存成功");
+//                log.info("Git Bash: {}", AppConfig.getGitBashPath());
+//                log.info("KubeConfig: {}", AppConfig.getKubeConfigPath());
+//            }
+//        } catch (IOException e) {
+//            log.error("无法加载设置窗口: {}", e.getMessage());
+//            Platform.runLater(() -> showAlert("错误", "无法加载设置窗口: " + e.getMessage()));
+//        }
+    }
+
+    @FXML
+    public void refreshOnClick(MouseEvent mouseEvent) {
+        // 禁用按钮并显示“加载中...”
+        refreshButton.setDisable(true);
+        loadingIndicator.setVisible(true);
+
+        new Thread(() -> {
+            try {
+                // 执行刷新逻辑
+                AppConfig.clearRootItem();
+                refreshTree(searchField.getText());
+            } catch (Exception e) {
+                log.error("刷新失败: {}", e.getMessage());
+            }
+            Platform.runLater(() -> {
+                refreshButton.setDisable(false);
+                loadingIndicator.setVisible(false);
+            });
+        }).start();
+
     }
 }

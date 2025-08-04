@@ -1,6 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-
-<?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
@@ -9,21 +7,19 @@
             fx:controller="com.longfor.lmk.k8slogviewer.controller.SettingsController">
 
     <content>
-        <VBox spacing="15" padding="20">
-            <Label text="配置设置" style="-fx-font-size: 18px; -fx-font-weight: bold;" />
-
+        <VBox spacing="20" style="-fx-background-color: #f9f9f9;">
             <!-- Git Bash 路径 -->
-            <HBox spacing="10" alignment="CENTER_LEFT">
-                <Label text="Git Bash 路径：" minWidth="120"/>
-                <TextField fx:id="gitBashPathField" HBox.hgrow="ALWAYS"/>
-                <Button text="选择" onAction="#onBrowseGitBash"/>
+            <HBox spacing="15" alignment="CENTER_LEFT">
+                <Label text="Git Bash 路径：" minWidth="65" style="-fx-font-weight: semi-bold;"/>
+                <TextField fx:id="gitBashPathField" HBox.hgrow="ALWAYS" promptText="请选择 Git Bash 路径"/>
+                <Button text="选择" onAction="#onBrowseGitBash" style="-fx-min-width: 70px;"/>
             </HBox>
 
             <!-- Kubeconfig 路径 -->
-            <HBox spacing="10" alignment="CENTER_LEFT">
-                <Label text="Kubeconfig 路径：" minWidth="120"/>
-                <TextField fx:id="kubeConfigPathField" HBox.hgrow="ALWAYS"/>
-                <Button text="选择" onAction="#onBrowseKubeconfig"/>
+            <HBox spacing="15" alignment="CENTER_LEFT">
+                <Label text="Kubeconfig 路径：" minWidth="65" style="-fx-font-weight: semi-bold;"/>
+                <TextField fx:id="kubeConfigPathField" HBox.hgrow="ALWAYS" promptText="请选择 Kubeconfig 文件路径"/>
+                <Button text="选择" onAction="#onBrowseKubeconfig" style="-fx-min-width: 70px;"/>
             </HBox>
         </VBox>
     </content>

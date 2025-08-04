@@ -1,6 +1,7 @@
 package com.longfor.lmk.k8slogviewer.utils;
 
 import javafx.scene.control.Alert;
+import javafx.scene.control.TreeItem;
 
 public class CommonUtils {
     private CommonUtils() {
@@ -13,5 +14,36 @@ public class CommonUtils {
         alert.setHeaderText(null);
         alert.setContentText(content);
         alert.showAndWait();
+    }
+
+    public static TreeItem<String> filterTree(TreeItem<String> node, String filter) {
+        // 叶子节点：直接判断是否匹配
+        if (node.isLeaf()) {
+            String value = node.getValue();
+            boolean matches = value != null && value.toLowerCase().contains(filter.toLowerCase());
+            return matches ? node : null;
+        }
+
+        // 非叶子节点：处理子节点
+        TreeItem<String> newParent = new TreeItem<>(node.getValue());
+        for (TreeItem<String> child : node.getChildren()) {
+            TreeItem<String> filteredChild = filterTree(child, filter);
+            if (filteredChild != null) {
+                newParent.getChildren().add(filteredChild);
+            }
+        }
+
+        // 检查父节点是否需要保留
+        if (!newParent.getChildren().isEmpty()) {
+            newParent.setExpanded(filter != null && !filter.isEmpty());
+            return newParent;
+        } else {
+            // 如果没有子节点，但父节点本身匹配也保留（根据需求调整）
+            if (newParent.getValue() != null &&
+                    newParent.getValue().toLowerCase().contains(filter.toLowerCase())) {
+                return newParent;
+            }
+            return null;
+        }
     }
 }

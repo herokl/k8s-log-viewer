@@ -1,16 +1,23 @@
 package com.longfor.lmk.k8slogviewer.config;
 
 import io.kubernetes.client.openapi.ApiClient;
+import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.Configuration;
 import io.kubernetes.client.openapi.apis.CoreApi;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
+import io.kubernetes.client.openapi.models.V1Namespace;
+import io.kubernetes.client.openapi.models.V1Pod;
 import io.kubernetes.client.util.Config;
 import javafx.application.Platform;
+import javafx.collections.ObservableList;
+import javafx.scene.control.TreeItem;
+import javafx.stage.Stage;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.prefs.Preferences;
 
@@ -19,9 +26,12 @@ import static com.longfor.lmk.k8slogviewer.utils.CommonUtils.showAlert;
 @Slf4j
 public class AppConfig {
     private static final Preferences PREFS = Preferences.userNodeForPackage(AppConfig.class);
+    private static final Map<String, Object> ITEM_MAP = new HashMap<>();
+    private static final String ROOT_KEY = "root_key";
     private static final String GIT_BASH_PATH_KEY = "git_bash_path";
     private static final String KUBECONFIG_PATH_KEY = "kubeconfig_path";
     public static final String FILES_GIT_BIN_BASH_EXE = "C:\\Program Files\\Git\\bin\\bash.exe";
+    public static final String MAIN_STAGE = "mainStage";
 
     private AppConfig() {
     }
@@ -51,6 +61,69 @@ public class AppConfig {
         }
         Configuration.setDefaultApiClient(client);
         return new CoreV1Api();
+    }
+
+    public static TreeItem<String> getRootItem() {
+        TreeItem<String> treeItem = (TreeItem<String>) ITEM_MAP.get(ROOT_KEY);
+        if (treeItem != null) return treeItem;
+        TreeItem<String> root = new TreeItem<>("集群");
+        root.setExpanded(true);
+        try {
+            CoreV1Api coreV1Api = getCoreV1Api();
+            List<V1Namespace> namespaces = coreV1Api.listNamespace(null, null, null, null, null, null, null, null, null).getItems();
+            namespaces.parallelStream().forEach(ns -> getPods(ns, root, coreV1Api));
+        } catch (ApiException e) {
+            Platform.runLater(() -> showAlert("错误", "无法加载 Kubernetes 数据: " + e.getResponseBody()));
+        }
+        ITEM_MAP.put(ROOT_KEY, root);
+        return root;
+    }
+
+    public static void clearRootItem(){
+        ITEM_MAP.remove(ROOT_KEY);
+    }
+
+    public static Stage getMainStage(){
+        return (Stage) ITEM_MAP.get(MAIN_STAGE);
+    }
+
+    public static void setMainStage(Stage stage){
+        ITEM_MAP.put(MAIN_STAGE, stage);
+    }
+
+    private static void getPods(V1Namespace ns, TreeItem<String> root, CoreV1Api coreV1Api) {
+
+        String nsName = null;
+        if (ns.getMetadata() != null) {
+            nsName = ns.getMetadata().getName();
+        }
+        TreeItem<String> nsItem = new TreeItem<>(nsName);
+        List<V1Pod> pods = null;
+        try {
+            pods = coreV1Api.listNamespacedPod(nsName, null, null, null, null, null, null, null, null, null).getItems();
+        } catch (ApiException e) {
+            log.info("获取命名空间[{}]pod失败!", nsName);
+        }
+        if (pods != null) {
+            for (V1Pod pod : pods) {
+                String podName = null;
+                if (pod.getMetadata() != null) {
+                    podName = pod.getMetadata().getName();
+                }
+                if(podName != null) {
+                    TreeItem<String> podItem = new TreeItem<>(podName);
+                    nsItem.getChildren().add(podItem);
+                }
+            }
+        }
+        if (!nsItem.getChildren().isEmpty()) {
+            root.getChildren().add(nsItem);
+        }
+    }
+
+
+    public static void setRootItem(TreeItem<String> rootItem) {
+        ITEM_MAP.put(ROOT_KEY, rootItem);
     }
 
     public static void setGitBashPath(String path) {

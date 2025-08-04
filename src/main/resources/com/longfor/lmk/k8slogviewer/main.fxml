@@ -10,7 +10,7 @@
             <padding>
                 <Insets top="10" right="10" bottom="10" left="10"/>
             </padding>
-            <Button fx:id="settingsButton" style="-fx-background-color: transparent; -fx-cursor: hand;"/>
+            <Button fx:id="settingsButton" onMouseClicked="#handleOpenSettings" style="-fx-background-color: transparent; -fx-cursor: hand;"/>
         </VBox>
     </left>
 
@@ -24,7 +24,8 @@
                 </padding>
                 <HBox spacing="10">
                     <TextField fx:id="searchField" promptText="搜索命名空间/Pod/容器..." HBox.hgrow="ALWAYS"/>
-                    <Button fx:id="refreshButton" text="刷新" styleClass="action-button"/>
+                    <Button fx:id="refreshButton" text="刷新" styleClass="action-button" onMouseClicked="#refreshOnClick"/>
+                    <ProgressIndicator fx:id="loadingIndicator" visible="false" maxWidth="20" maxHeight="20"/>
                 </HBox>
                 <TreeView fx:id="treeView" styleClass="tree-view" VBox.vgrow="ALWAYS"/>
             </VBox>
@@ -37,8 +38,7 @@
                 <VBox spacing="5">
                     <!-- 第一行：搜索框、搜索类型、搜索按钮 -->
                     <HBox spacing="10" alignment="CENTER_LEFT">
-<!--                        <TextArea fx:id="logSearchField" promptText="搜索日志..." prefWidth="300" prefHeight="20" wrapText="true"/>-->
-                        <TextField fx:id="logSearchField" promptText="搜索日志..." HBox.hgrow="ALWAYS"/>
+                        <TextField fx:id="logSearchField" promptText="搜索日志..." HBox.hgrow="ALWAYS" prefWidth="180"/>
                         <Button fx:id="searchButton" text="搜索" styleClass="action-button" onMouseClicked="#searchButtonClick"/>
                     </HBox>
                     <!-- 第二行：上下文行数、尾行数、暂停/恢复搜索、时间范围 -->
