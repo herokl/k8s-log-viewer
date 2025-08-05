@@ -71,6 +71,7 @@ public class KubectlLogFetcherUtil {
             pb.environment().put("KUBECONFIG", kubeconfig);
         }
         Process process = pb.start();
+        log.info("启动进程: {}", process.pid());
         SingleProcessManager.register(process);
         ExecutorService executor = Executors.newSingleThreadExecutor();
         executor.submit(() -> {
