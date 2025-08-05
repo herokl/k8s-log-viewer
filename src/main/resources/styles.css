@@ -50,17 +50,26 @@
 .log-area {
     -fx-font-family: "Courier New";
     -fx-font-size: 12px;
-    -fx-background-color: black;
-    -fx-text-fill: #D3D3D3; /* 普通日志文字浅灰色 */
+    -fx-background-color: #D3D3D3;
+    -fx-text-fill: black; /* 普通日志文字浅灰色 */
 }
 
 /* 日志高亮：黄色背景，文字白色 */
 .highlight {
-    -fx-background-color: yellow;
-    -fx-text-fill: white;
+    -fx-background-color: #FFD700; /* 金黄色 */
+    -fx-text-fill: black;
     -fx-font-family: "Courier New";
     -fx-font-size: 14px;
 }
+
+.lineno {
+    -fx-background-color: #1e1e1e;
+    -fx-text-fill: #888;
+    -fx-padding: 0 8px 0 5px;
+    -fx-font-size: 12px;
+    -fx-font-family: "Courier New";
+}
+
 
 /* 加载中提示样式 */
 .loading-text {

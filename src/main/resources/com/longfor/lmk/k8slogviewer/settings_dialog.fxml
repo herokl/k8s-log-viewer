@@ -10,14 +10,14 @@
         <VBox spacing="20" style="-fx-background-color: #f9f9f9;">
             <!-- Git Bash 路径 -->
             <HBox spacing="15" alignment="CENTER_LEFT">
-                <Label text="Git Bash 路径：" minWidth="65" style="-fx-font-weight: semi-bold;"/>
+                <Label text="Git Bash 路径：" minWidth="65"/>
                 <TextField fx:id="gitBashPathField" HBox.hgrow="ALWAYS" promptText="请选择 Git Bash 路径"/>
                 <Button text="选择" onAction="#onBrowseGitBash" style="-fx-min-width: 70px;"/>
             </HBox>
 
             <!-- Kubeconfig 路径 -->
             <HBox spacing="15" alignment="CENTER_LEFT">
-                <Label text="Kubeconfig 路径：" minWidth="65" style="-fx-font-weight: semi-bold;"/>
+                <Label text="Kubeconfig 路径：" minWidth="65"/>
                 <TextField fx:id="kubeConfigPathField" HBox.hgrow="ALWAYS" promptText="请选择 Kubeconfig 文件路径"/>
                 <Button text="选择" onAction="#onBrowseKubeconfig" style="-fx-min-width: 70px;"/>
             </HBox>

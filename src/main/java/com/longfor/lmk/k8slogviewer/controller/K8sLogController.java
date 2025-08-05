@@ -1,7 +1,7 @@
 package com.longfor.lmk.k8slogviewer.controller;
 
 import com.longfor.lmk.k8slogviewer.config.AppConfig;
-import com.longfor.lmk.k8slogviewer.utils.KubectlLogFetcher;
+import com.longfor.lmk.k8slogviewer.utils.KubectlLogFetcherUtil;
 import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.Configuration;
@@ -21,7 +21,6 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
-import javafx.scene.text.TextFlow;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
@@ -79,7 +78,6 @@ public class K8sLogController {
         // 异步检查 Git 的 bash.exe（Windows 环境）
         if (System.getProperty("os.name").toLowerCase().contains("win")) {
             Platform.runLater(() -> {
-                if (KubectlLogFetcher.findBashPath() == null) {
                     Alert alert = new Alert(Alert.AlertType.WARNING);
                     alert.setTitle("Git Bash 路径未配置");
                     alert.setHeaderText(null);
@@ -95,7 +93,6 @@ public class K8sLogController {
                             showGitBashSettingsDialog();  // 调用显示设置页面的方法
                         }
                     });
-                }
             });
         }
 
@@ -279,7 +276,7 @@ public class K8sLogController {
     private void loadLogs() {
         if (currentPod == null || currentNamespace == null) return;
         // 初始加载静态日志
-        Object result = KubectlLogFetcher.fetchLogs(currentNamespace, currentPod, currentContainer, tailLines, sinceSeconds, false);
+        Object result = null;
         if (result instanceof List) {
             @SuppressWarnings("unchecked")
             List<String> logs = (List<String>) result;
@@ -324,7 +321,7 @@ public class K8sLogController {
             return;
         }
         // 假设 keyword 是命令行搜索结果（kubectl logs | grep -C）
-        List<String> logs = (List<String>) KubectlLogFetcher.fetchLogWithContext(currentNamespace, currentPod, currentContainer, keyword, contextLines, sinceSeconds, false);
+        List<String> logs = null;
 
         Platform.runLater(() -> setLogs(logs));
 

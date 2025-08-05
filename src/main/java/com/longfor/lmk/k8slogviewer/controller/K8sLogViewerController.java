@@ -3,16 +3,26 @@ package com.longfor.lmk.k8slogviewer.controller;
 import com.longfor.lmk.k8slogviewer.config.AppConfig;
 import com.longfor.lmk.k8slogviewer.config.K8sQuery;
 import com.longfor.lmk.k8slogviewer.utils.CommonUtils;
+import com.longfor.lmk.k8slogviewer.utils.KubectlLogFetcherUtil;
+import com.longfor.lmk.k8slogviewer.utils.LogStyleUtil;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
+import javafx.geometry.Insets;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.VBox;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
 import lombok.extern.slf4j.Slf4j;
 import org.fxmisc.richtext.CodeArea;
+import org.fxmisc.richtext.LineNumberFactory;
 
 import java.io.IOException;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.Objects;
 
 import static com.longfor.lmk.k8slogviewer.config.AppConfig.initializeEnvironment;
@@ -20,7 +30,14 @@ import static com.longfor.lmk.k8slogviewer.utils.CommonUtils.showAlert;
 
 @Slf4j
 public class K8sLogViewerController {
-    private static final K8sQuery K8S_QUERY = new K8sQuery();
+    private static final K8sQuery K8S_QUERY = K8sQuery.builder()
+            .contextLines(2)
+            .tailLines(100)
+            .sinceSeconds(0)
+            .follow(true)
+            .searchRunning(true)
+            .build();
+    @FXML
     public ProgressIndicator loadingIndicator;
     @FXML
     private TreeView<String> treeView;
@@ -73,15 +90,14 @@ public class K8sLogViewerController {
             Platform.runLater(() -> showAlert("错误", "无法加载设置图标: " + e.getMessage()));
         }
         // 设置右侧按钮跟图标
-        int tailLines = 100;
-        int contextLine = 2;
-        K8S_QUERY.setTailLines(tailLines);
-        K8S_QUERY.setContextLines(contextLine);
-        contextField.setText(String.valueOf(contextLine));
         contextField.setPromptText("上下文行数");
-        tailField.setText(String.valueOf(100));
+        contextField.setText(String.valueOf(2));
+        K8S_QUERY.setContextLines(2);
+
         tailField.setPromptText("尾行数");
-        searchToggleButton.setText("暂停");
+        tailField.setText(String.valueOf(100));
+        K8S_QUERY.setTailLines(100);
+
         searchButton.setText("搜索");
         searchButton.getStyleClass().add("action-button");
         //初始化日志样式
@@ -108,6 +124,10 @@ public class K8sLogViewerController {
             }
         });
         searchField.textProperty().addListener((obs, oldVal, newVal) -> refreshTree(newVal));
+        // 设置日志显示行号
+        logArea.setParagraphGraphicFactory(LineNumberFactory.get(logArea)); // 添加行号
+        logArea.setWrapText(true); // 可选：自动换行
+        timeRangeButton.setOnAction(e -> showTimeRangeDialog());
         // 设置树视图单击事件
         treeView.setOnMouseClicked(this::handleTreeViewClick);
 
@@ -116,14 +136,30 @@ public class K8sLogViewerController {
             if (newVal != null && newVal.getParent() != null) {
                 TreeItem<String> parent = newVal.getParent();
                 if (parent.getParent() != null) {
-                    K8S_QUERY.setNamespace(newVal.getValue());
-                    K8S_QUERY.setPodName(newVal.getValue());
+                    // parent 是 namespace，newVal 是 pod
+                    String namespace = parent.getValue();
+                    String podName = newVal.getValue();
+
+                    log.info("选择命名空间: {}, Pod: {}", namespace, podName);
+                    K8S_QUERY.setNamespace(namespace);
+                    K8S_QUERY.setPodName(podName);
+                    showLogs();
                 }
             }
         });
 
         // 初始加载树
         refreshTree(null);
+    }
+
+    private void showLogs() {
+        try {
+            logArea.clear();
+            KubectlLogFetcherUtil.fetchStreaming(K8S_QUERY, "/scripts/search_logs.sh", line -> LogStyleUtil.appendHighlightedLine(logArea, line, K8S_QUERY));
+        } catch (IOException e) {
+            log.error("获取日志失败: {}", e.getMessage());
+            Platform.runLater(() -> showAlert("错误", "无法获取日志: " + e.getMessage()));
+        }
     }
 
     private void refreshTree(String filter) {
@@ -153,6 +189,8 @@ public class K8sLogViewerController {
 
     @FXML
     public void searchButtonClick(MouseEvent mouseEvent) {
+        K8S_QUERY.setKeyword(logSearchField.getText());
+        showLogs();
     }
 
     @FXML
@@ -163,27 +201,6 @@ public class K8sLogViewerController {
         } catch (IOException e) {
             Platform.runLater(() -> showAlert("错误", "无法加载设置窗口: " + e.getMessage()));
         }
-//        try {
-//            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/longfor/lmk/k8slogviewer/settings_dialog.fxml"));
-//            DialogPane dialogPane = loader.load();
-//
-//            Dialog<ButtonType> dialog = new Dialog<>();
-//            dialog.setTitle("设置");
-//            dialog.setDialogPane(dialogPane);
-//            dialog.initOwner(AppConfig.getMainStage()); // 指定主窗口作为 owner
-//            dialog.initModality(Modality.APPLICATION_MODAL);
-//
-//            Optional<ButtonType> result = dialog.showAndWait();
-//            if (result.isPresent() && result.get().getButtonData() == ButtonBar.ButtonData.OK_DONE) {
-//                // 用户点击了“保存”按钮
-//                log.info("设置保存成功");
-//                log.info("Git Bash: {}", AppConfig.getGitBashPath());
-//                log.info("KubeConfig: {}", AppConfig.getKubeConfigPath());
-//            }
-//        } catch (IOException e) {
-//            log.error("无法加载设置窗口: {}", e.getMessage());
-//            Platform.runLater(() -> showAlert("错误", "无法加载设置窗口: " + e.getMessage()));
-//        }
     }
 
     @FXML
@@ -206,5 +223,48 @@ public class K8sLogViewerController {
             });
         }).start();
 
+    }
+
+    private void showTimeRangeDialog() {
+        Stage dialog = new Stage();
+        dialog.initModality(Modality.APPLICATION_MODAL);
+        dialog.setTitle("选择开始时间（至今）");
+
+        VBox dialogPane = new VBox(10);
+        dialogPane.setPadding(new Insets(20));
+
+        DatePicker startDate = new DatePicker();
+        Button applyButton = new Button("应用");
+        applyButton.getStyleClass().add("action-button");
+
+        applyButton.setOnAction(e -> {
+            LocalDateTime start = startDate.getValue() != null ? startDate.getValue().atStartOfDay() : null;
+            if (start != null) {
+                K8S_QUERY.setSinceSeconds(Duration.between(start, LocalDateTime.now()).getSeconds());
+                showLogs();
+                dialog.close();
+            } else {
+                showAlert("错误", "请选择开始日期");
+            }
+        });
+
+        dialogPane.getChildren().addAll(
+                new Label("从哪天开始查看日志（直到现在）:"),
+                startDate,
+                applyButton
+        );
+
+        Scene dialogScene = new Scene(dialogPane, 300, 150);
+        dialogScene.getStylesheets().add(Objects.requireNonNull(getClass().getResource("/styles.css")).toExternalForm());
+        dialog.setScene(dialogScene);
+        dialog.show();
+    }
+
+    @FXML
+    public void searchToggleClick(MouseEvent mouseEvent) {
+        boolean searchRunning = !K8S_QUERY.isSearchRunning();
+        K8S_QUERY.setSearchRunning(searchRunning);
+        // 暂停滚动控制
+        searchToggleButton.setText(searchRunning ? "暂停" : "恢复");
     }
 }

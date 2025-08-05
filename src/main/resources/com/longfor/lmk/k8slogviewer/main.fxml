@@ -47,7 +47,7 @@
                         <TextField fx:id="contextField" promptText="上下文行数" prefWidth="80"/>
                         <Label text="尾行数:"/>
                         <TextField fx:id="tailField" promptText="尾行数" prefWidth="80"/>
-                        <Button fx:id="searchToggleButton" text="暂停搜索" styleClass="action-button"/>
+                        <Button fx:id="searchToggleButton" onMouseClicked="#searchToggleClick" text="暂停" styleClass="action-button"/>
                         <Button fx:id="timeRangeButton" text="时间范围" styleClass="action-button"/>
                     </HBox>
                 </VBox>
