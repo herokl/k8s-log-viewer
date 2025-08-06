@@ -2,6 +2,7 @@ package com.longfor.lmk.k8slogviewer.utils;
 
 import com.longfor.lmk.k8slogviewer.config.AppConfig;
 import com.longfor.lmk.k8slogviewer.config.K8sQuery;
+import javafx.application.Platform;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.*;
@@ -15,7 +16,6 @@ import java.util.stream.Collectors;
 @Slf4j
 public class KubectlLogFetcherUtil {
     private static File cachedScriptFile = null;
-
     private static File extractScriptToTempFile(String resourcePath) throws IOException {
         if (cachedScriptFile != null && cachedScriptFile.exists()) {
             return cachedScriptFile;
@@ -59,9 +59,6 @@ public class KubectlLogFetcherUtil {
     }
 
     public static void fetchStreaming(K8sQuery query, String resourceScriptPath, Consumer<String> logLineConsumer) throws IOException {
-        if (!query.isFollow()) {
-            throw new IllegalArgumentException("follow=false 不应使用流式方法");
-        }
         File scriptFile = extractScriptToTempFile(resourceScriptPath);
         String[] cmd = buildCommandArgs(query, scriptFile.getAbsolutePath());
         log.info("执行命令: {}", String.join(" ", cmd));
@@ -72,8 +69,9 @@ public class KubectlLogFetcherUtil {
         }
         Process process = pb.start();
         log.info("启动进程: {}", process.pid());
-        SingleProcessManager.register(process);
         ExecutorService executor = Executors.newSingleThreadExecutor();
+        SingleProcessManager.register(process, executor);
+        Platform.runLater(() -> query.getCodeAreas().forEach(LogStyleUtil::clear));
         executor.submit(() -> {
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
                 String line;

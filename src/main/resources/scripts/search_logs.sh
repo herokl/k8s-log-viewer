@@ -6,62 +6,49 @@ NAMESPACE=$1
 # 参数 2：Pod 名称（必填）
 POD=$2
 
-# 参数 3：关键字（可选，如果为空则不进行过滤）
+# 参数 3：关键字（可选）
 KEYWORD=$3
 
-# 参数 4：tail 行数（可选，默认 1000）
+# 参数 4：tail 行数（默认 1000）
 TAIL=${4:-1000}
 
-# 参数 5：上下文行数（可选，默认 2）
-CONTEXT=${5:-2}
+# 参数 5：上下文行数（默认 0）
+CONTEXT=${5:-0}
 
-# 参数 6：是否实时滚动（true/false，默认 false）
+# 参数 6：是否实时滚动（true/false）
 FOLLOW=${6:-false}
 
-# 参数 7：多少秒以内的日志（可选，例如 300 表示最近5分钟）
+# 参数 7：最近多少秒内日志（可选）
 SINCE_SECONDS=${7:-0}
 
 # 构建基本命令
-CMD="kubectl logs \"$POD\" -n \"$NAMESPACE\" --tail=\"$TAIL\""
+CMD="kubectl logs \"$POD\" -n \"$NAMESPACE\""
 
-# 如果设置为实时滚动，加上 -f 参数
-if [[ "$FOLLOW" == "true" ]]; then
-  CMD="$CMD -f"
+if [[ "$TAIL" -gt 0 ]]; then
+  CMD="$CMD --tail=${TAIL}"
 fi
 
-# 如果设置了 sinceSeconds 参数并且大于0，追加参数
+if [[ "$FOLLOW" == "true" ]]; then
+    CMD="$CMD -f"
+    echo "[Info] 实时滚动中 ..."
+  else
+    echo "[Info] 静态输出最近 $TAIL 行日志 ..."
+fi
+
 if [[ "$SINCE_SECONDS" -gt 0 ]]; then
   CMD="$CMD --since=${SINCE_SECONDS}s"
 fi
 
-# 如果 KEYWORD 为空，直接输出原始日志
-if [[ -z "$KEYWORD" ]]; then
-  echo "[Info] 未指定关键字，直接输出原始日志..."
-  eval "$CMD"
+# awk脚本写成一行，避免换行打印不全
+AWK_CMD="awk 'BEGIN { inblock=0 } /^--$/ { if (inblock) { print \"----- 上下文结束 -----\"; inblock=0 } next } { if (!inblock) { print \"----- 上下文开始 -----\"; inblock=1 } print } END { if (inblock) { print \"----- 上下文结束 -----\" } }'"
+
+# 打印分割线和完整命令
+if [[ -n "$KEYWORD" && "$CONTEXT" -gt 0 ]]; then
+  END_CMD="$CMD | grep -C $CONTEXT \"$KEYWORD\" | $AWK_CMD"
 else
-  echo "[Info] 关键字：$KEYWORD，上下文：$CONTEXT，过滤中..."
-  eval "$CMD" \
-  | grep -C "$CONTEXT" "$KEYWORD" \
-  | awk '
-    BEGIN { inblock = 0 }
-    /^--$/ {
-      if (inblock) {
-        print "\n----- 上下文结束 -----\n"
-        inblock = 0
-      }
-      next
-    }
-    {
-      if (!inblock) {
-        print "\n----- 上下文开始 -----\n"
-        inblock = 1
-      }
-      print
-    }
-    END {
-      if (inblock) {
-        print "\n----- 上下文结束 -----\n"
-      }
-    }
-  '
+  END_CMD="$CMD"
 fi
+
+echo "[Info] 执行命令：$END_CMD"
+echo "=================================分割线================================="
+eval "$END_CMD"

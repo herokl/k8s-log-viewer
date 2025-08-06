@@ -1,16 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-<?import javafx.geometry.*?>
+
 <?import org.fxmisc.richtext.CodeArea?>
-<BorderPane fx:id="root" style="-fx-font-family: 'Arial'; -fx-background-color: #f4f4f4;" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.longfor.lmk.k8slogviewer.controller.K8sLogViewerController">
+<BorderPane xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.longfor.lmk.k8slogviewer.controller.K8sLogViewerController"
+            stylesheets="@/styles.css"
+            styleClass="root">
+
     <!-- 左侧菜单 -->
     <left>
-        <VBox style="-fx-background-color: #f4f4f4; -fx-min-width: 25px;" alignment="BOTTOM_LEFT" spacing="10" VBox.vgrow="ALWAYS">
+        <VBox styleClass="left-menu" alignment="BOTTOM_LEFT" spacing="10" VBox.vgrow="ALWAYS"
+              style="-fx-background-color: #f4f6f8; -fx-min-width: 30;">
             <padding>
                 <Insets top="10" right="10" bottom="10" left="10"/>
             </padding>
-            <Button fx:id="settingsButton" onMouseClicked="#handleOpenSettings" style="-fx-background-color: transparent; -fx-cursor: hand;"/>
+            <Button fx:id="settingsButton" onMouseClicked="#handleOpenSettings"
+                    style="-fx-background-color: transparent; -fx-cursor: hand;"/>
         </VBox>
     </left>
 
@@ -18,40 +25,61 @@
     <center>
         <SplitPane dividerPositions="0.3" SplitPane.resizableWithParent="true">
             <!-- 中间树视图 -->
-            <VBox spacing="10">
+            <VBox spacing="10" styleClass="tree-pane">
                 <padding>
                     <Insets top="10" right="10" bottom="10" left="10"/>
                 </padding>
+
                 <HBox spacing="10">
-                    <TextField fx:id="searchField" promptText="搜索命名空间/Pod/容器..." HBox.hgrow="ALWAYS"/>
+                    <padding>
+                        <Insets bottom="10"/>
+                    </padding>
+
+                    <TextField fx:id="searchField" promptText="搜索命名空间/Pod/容器..."
+                               HBox.hgrow="ALWAYS" styleClass="text-field"/>
                     <Button fx:id="refreshButton" text="刷新" styleClass="action-button" onMouseClicked="#refreshOnClick"/>
                     <ProgressIndicator fx:id="loadingIndicator" visible="false" maxWidth="20" maxHeight="20"/>
                 </HBox>
+
                 <TreeView fx:id="treeView" styleClass="tree-view" VBox.vgrow="ALWAYS"/>
             </VBox>
 
             <!-- 右侧日志窗口 -->
-            <VBox styleClass="log-pane" spacing="10">
+            <VBox spacing="10" styleClass="log-pane">
                 <padding>
                     <Insets top="10" right="10" bottom="10" left="10"/>
                 </padding>
+
                 <VBox spacing="5">
-                    <!-- 第一行：搜索框、搜索类型、搜索按钮 -->
+                    <!-- 第一行：搜索框、搜索按钮 -->
                     <HBox spacing="10" alignment="CENTER_LEFT">
-                        <TextField fx:id="logSearchField" promptText="搜索日志..." HBox.hgrow="ALWAYS" prefWidth="180"/>
+                        <padding>
+                            <Insets bottom="10"/>
+                        </padding>
+
+                        <TextField fx:id="logSearchField" promptText="搜索日志..."
+                                   HBox.hgrow="ALWAYS" prefWidth="180" styleClass="text-field"/>
                         <Button fx:id="searchButton" text="搜索" styleClass="action-button" onMouseClicked="#searchButtonClick"/>
                     </HBox>
+
                     <!-- 第二行：上下文行数、尾行数、暂停/恢复搜索、时间范围 -->
                     <HBox spacing="10" alignment="CENTER_LEFT">
-                        <Label text="上下文行数:"/>
-                        <TextField fx:id="contextField" promptText="上下文行数" prefWidth="80"/>
-                        <Label text="尾行数:"/>
-                        <TextField fx:id="tailField" promptText="尾行数" prefWidth="80"/>
+                        <Label text="上下文行数:" styleClass="label"/>
+                        <TextField fx:id="contextField" prefWidth="80" styleClass="text-field"/>
+                        <Label text="尾行数:" styleClass="label"/>
+                        <TextField fx:id="tailField" promptText="尾行数" prefWidth="80" styleClass="text-field"/>
                         <Button fx:id="searchToggleButton" onMouseClicked="#searchToggleClick" text="暂停" styleClass="action-button"/>
                         <Button fx:id="timeRangeButton" text="时间范围" styleClass="action-button"/>
                     </HBox>
                 </VBox>
-                <CodeArea fx:id="logArea" styleClass="log-area" VBox.vgrow="ALWAYS"/>
+                <!-- 置顶日志区域 -->
+                <CodeArea fx:id="headerArea" editable="false" maxHeight="50"
+                          styleClass="log-header"/>
+                <!-- 日志显示区域容器 -->
+                <AnchorPane fx:id="logAreaContainer" VBox.vgrow="ALWAYS">
+                    <CodeArea fx:id="logArea" editable="false" AnchorPane.topAnchor="0.0" AnchorPane.bottomAnchor="0.0"
+                             AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" styleClass="log-area"/>
+                </AnchorPane>
             </VBox>
         </SplitPane>
     </center>

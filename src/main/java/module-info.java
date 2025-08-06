@@ -12,6 +12,7 @@ module com.longfor.lmk.k8slogviewer {
     requires java.prefs;
     requires com.fasterxml.jackson.databind;
     requires org.fxmisc.richtext;
+    requires org.fxmisc.flowless;
 
     opens com.longfor.lmk.k8slogviewer to javafx.fxml;
     exports com.longfor.lmk.k8slogviewer;

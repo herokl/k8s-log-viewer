@@ -13,32 +13,40 @@ import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import lombok.extern.slf4j.Slf4j;
+import org.fxmisc.flowless.VirtualizedScrollPane;
 import org.fxmisc.richtext.CodeArea;
 import org.fxmisc.richtext.LineNumberFactory;
 
 import java.io.IOException;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.Objects;
 
 import static com.longfor.lmk.k8slogviewer.config.AppConfig.initializeEnvironment;
 import static com.longfor.lmk.k8slogviewer.utils.CommonUtils.showAlert;
+import static com.longfor.lmk.k8slogviewer.utils.CommonUtils.showConfirm;
 
 @Slf4j
 public class K8sLogViewerController {
     private static final K8sQuery K8S_QUERY = K8sQuery.builder()
-            .contextLines(2)
-            .tailLines(100)
+            .contextLines(0)
+            .tailLines(1000)
             .sinceSeconds(0)
             .follow(true)
             .searchRunning(true)
             .build();
     @FXML
     public ProgressIndicator loadingIndicator;
+    @FXML
+    public AnchorPane logAreaContainer;
+    @FXML
+    public CodeArea headerArea;
     @FXML
     private TreeView<String> treeView;
     @FXML
@@ -89,44 +97,64 @@ public class K8sLogViewerController {
         } catch (Exception e) {
             Platform.runLater(() -> showAlert("错误", "无法加载设置图标: " + e.getMessage()));
         }
-        // 设置右侧按钮跟图标
-        contextField.setPromptText("上下文行数");
-        contextField.setText(String.valueOf(2));
-        K8S_QUERY.setContextLines(2);
+        K8S_QUERY.setContextLines(0);
 
         tailField.setPromptText("尾行数");
-        tailField.setText(String.valueOf(100));
-        K8S_QUERY.setTailLines(100);
+        tailField.setText(String.valueOf(1000));
+        K8S_QUERY.setTailLines(1000);
 
         searchButton.setText("搜索");
         searchButton.getStyleClass().add("action-button");
         //初始化日志样式
         // 初始化 CodeArea
+        headerArea.setEditable(false);
         logArea.setEditable(false);
-        logArea.getStyleClass().add("log-area");
+        // 设置日志显示行号
+        logArea.setParagraphGraphicFactory(LineNumberFactory.get(logArea)); // 添加行号
+        headerArea.setWrapText(true);
+        logArea.setWrapText(true); // 可选：自动换行
+        // 设置滚动条
+        VirtualizedScrollPane<CodeArea> scrollPane = new VirtualizedScrollPane<>(logArea);
+
+        AnchorPane.setTopAnchor(scrollPane, 0.0);
+        AnchorPane.setBottomAnchor(scrollPane, 0.0);
+        AnchorPane.setLeftAnchor(scrollPane, 0.0);
+        AnchorPane.setRightAnchor(scrollPane, 0.0);
+
+        logAreaContainer.getChildren().add(scrollPane);
 
         // 上下文行数监听器 校验
         contextField.textProperty().addListener((obs, oldVal, newVal) -> {
-            if (!newVal.matches("\\d*") || newVal.isEmpty() || Integer.parseInt(newVal) < 0) {
+            newVal = newVal.isEmpty() ? "0" : newVal;
+            if (!newVal.matches("\\d*") || Integer.parseInt(newVal) < 0) {
                 contextField.setText(oldVal);
-                Platform.runLater(() -> showAlert("错误", "请输入大于0数字"));
+                Platform.runLater(() -> showAlert("错误", "请输入大于等于0的数字"));
             } else {
-                K8S_QUERY.setContextLines(Integer.parseInt(newVal));
+                int num = Integer.parseInt(newVal);
+                K8S_QUERY.setFollow(num == 0);
+                K8S_QUERY.setContextLines(num);
             }
         });
         // 截取日志多少行监听
         tailField.textProperty().addListener((obs, oldVal, newVal) -> {
-            if (!newVal.matches("\\d*") || newVal.isEmpty() || Integer.parseInt(newVal) <= 0) {
+            newVal = newVal.isEmpty() ? "0" : newVal;
+            if (!newVal.matches("\\d*") || Integer.parseInt(newVal) < 0) {
                 tailField.setText(oldVal);
-                Platform.runLater(() -> showAlert("错误", "请输入大于0数字"));
+                Platform.runLater(() -> showAlert("错误", "请输入大于等于0的数字"));
             } else {
-                K8S_QUERY.setTailLines(Integer.parseInt(newVal));
+                int num = Integer.parseInt(newVal);
+                if (num != 0) {
+                    K8S_QUERY.setTailLines(num);
+                    return;
+                }
+                // 输入为0时，弹出确认提示
+                Platform.runLater(() -> showConfirm("提示", "尾行数为 0|null 会非常卡，是否继续？",
+                        () -> K8S_QUERY.setTailLines(0),
+                        () -> tailField.setText(oldVal)));
             }
         });
         searchField.textProperty().addListener((obs, oldVal, newVal) -> refreshTree(newVal));
-        // 设置日志显示行号
-        logArea.setParagraphGraphicFactory(LineNumberFactory.get(logArea)); // 添加行号
-        logArea.setWrapText(true); // 可选：自动换行
+
         timeRangeButton.setOnAction(e -> showTimeRangeDialog());
         // 设置树视图单击事件
         treeView.setOnMouseClicked(this::handleTreeViewClick);
@@ -143,6 +171,10 @@ public class K8sLogViewerController {
                     log.info("选择命名空间: {}, Pod: {}", namespace, podName);
                     K8S_QUERY.setNamespace(namespace);
                     K8S_QUERY.setPodName(podName);
+                    String text = logSearchField.getText();
+                    if (text != null && !text.isEmpty()) {
+                        K8S_QUERY.setKeyword(text);
+                    }
                     showLogs();
                 }
             }
@@ -154,8 +186,9 @@ public class K8sLogViewerController {
 
     private void showLogs() {
         try {
-            logArea.clear();
-            KubectlLogFetcherUtil.fetchStreaming(K8S_QUERY, "/scripts/search_logs.sh", line -> LogStyleUtil.appendHighlightedLine(logArea, line, K8S_QUERY));
+            K8S_QUERY.setHeaderCaptured(true);
+            K8S_QUERY.setCodeAreas(Arrays.asList(logArea, headerArea));
+            KubectlLogFetcherUtil.fetchStreaming(K8S_QUERY, "/scripts/search_logs.sh", line -> LogStyleUtil.appendHighlightedLine(headerArea, logArea, line, K8S_QUERY));
         } catch (IOException e) {
             log.error("获取日志失败: {}", e.getMessage());
             Platform.runLater(() -> showAlert("错误", "无法获取日志: " + e.getMessage()));
