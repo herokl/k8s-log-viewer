@@ -57,7 +57,7 @@ jobs:
             --dest dist \
             --mac-package-identifier com.longfor.lmk.k8slogviewer \
             --mac-package-name "K8s Log Viewer" \
-            --app-version 1.0 \  # <-- Removed the backtick here
+            --app-version 1.0 \
             --vendor "LMK"
 
       - name: Upload packaged app
