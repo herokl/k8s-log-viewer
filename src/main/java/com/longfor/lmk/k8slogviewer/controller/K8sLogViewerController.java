@@ -9,6 +9,7 @@ import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
@@ -23,7 +24,6 @@ import javafx.stage.Stage;
 import lombok.extern.slf4j.Slf4j;
 import org.fxmisc.flowless.VirtualizedScrollPane;
 import org.fxmisc.richtext.CodeArea;
-import org.fxmisc.richtext.LineNumberFactory;
 
 import java.io.IOException;
 import java.time.Duration;
@@ -31,6 +31,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Objects;
+import java.util.function.IntFunction;
 
 import static com.longfor.lmk.k8slogviewer.config.AppConfig.initializeEnvironment;
 import static com.longfor.lmk.k8slogviewer.utils.CommonUtils.showAlert;
@@ -114,7 +115,13 @@ public class K8sLogViewerController {
         headerArea.setEditable(false);
         logArea.setEditable(false);
         // 设置日志显示行号
-        logArea.setParagraphGraphicFactory(LineNumberFactory.get(logArea)); // 添加行号
+        IntFunction<Node> numberFactory = line -> {
+            Label label = new Label(String.valueOf(line + 1)); // 可选 +1，让行号从 1 开始
+            label.getStyleClass().add("line-number");
+            return label;
+        };
+        logArea.setParagraphGraphicFactory(numberFactory); // 添加行号
+
         headerArea.setWrapText(true);
         logArea.setWrapText(true); // 可选：自动换行
         // 设置滚动条
@@ -275,7 +282,7 @@ public class K8sLogViewerController {
         dialogPane.getStyleClass().add("dialog-pane");
 
         Label instruction = new Label("从哪天开始查看日志（直到现在）:");
-        instruction.getStyleClass().add("label");
+        instruction.getStyleClass().add("label-tab");
 
         DatePicker startDate = new DatePicker(LocalDate.now()); // 默认今天
 

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<?import javafx.geometry.Insets?>
+
+<?import javafx.geometry.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-
 <?import org.fxmisc.richtext.CodeArea?>
 <BorderPane xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.longfor.lmk.k8slogviewer.controller.K8sLogViewerController"
@@ -64,9 +64,9 @@
 
                     <!-- 第二行：上下文行数、尾行数、暂停/恢复搜索、时间范围 -->
                     <HBox spacing="10" alignment="CENTER_LEFT">
-                        <Label text="上下文行数:" styleClass="label"/>
+                        <Label text="上下文行数:" styleClass="label-tab"/>
                         <TextField fx:id="contextField" prefWidth="80" styleClass="text-field"/>
-                        <Label text="尾行数:" styleClass="label"/>
+                        <Label text="尾行数:" styleClass="label-tab"/>
                         <TextField fx:id="tailField" promptText="尾行数" prefWidth="80" styleClass="text-field"/>
                         <Button fx:id="searchToggleButton" onMouseClicked="#searchToggleClick" text="暂停" styleClass="action-button"/>
                         <Button fx:id="timeRangeButton" text="时间范围" styleClass="action-button"/>

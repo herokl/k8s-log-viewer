@@ -79,9 +79,9 @@
 }
 
 /* 行号样式 */
-.lineno {
+.line-number {
     -fx-background-color: #2D2D2D; /* 稍亮深灰色，与 .log-area 区分 */
-    -fx-text-fill: #888888; /* 中灰色文本 */
+    -fx-text-fill: #E0E0E0;
     -fx-padding: 0 10 0 6;
     -fx-font-size: 12px;
     -fx-font-family: "JetBrains Mono", "Courier New", monospace;
@@ -144,11 +144,10 @@
 }*/
 
 /* 标签文本 */
-/*.label {
+.label-tab {
     -fx-text-fill: #444444;
-    -fx-font-weight: 600;
-    -fx-font-size: 13px;
-}*/
+    -fx-font-size: 12px;
+}
 
 /* 进度指示器 */
 .progress-indicator .indicator {
@@ -160,9 +159,4 @@
     -fx-border-radius: 10;
     -fx-background-radius: 10;
     -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 10, 0, 0, 3);
-}
-
-.label {
-    -fx-font-size: 14px;
-    -fx-text-fill: #333;
 }

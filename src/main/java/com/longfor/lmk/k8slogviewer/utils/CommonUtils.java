@@ -1,10 +1,9 @@
 package com.longfor.lmk.k8slogviewer.utils;
 
-import javafx.application.Platform;
-import javafx.scene.control.*;
-
-import java.util.Optional;
-import java.util.function.IntConsumer;
+import javafx.scene.control.Alert;
+import javafx.scene.control.ButtonBar;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.TreeItem;
 
 public class CommonUtils {
     private CommonUtils() {

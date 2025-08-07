@@ -2,7 +2,6 @@ package com.longfor.lmk.k8slogviewer.config;
 
 import javafx.scene.Node;
 import javafx.scene.control.Label;
-import javafx.scene.text.Font;
 import org.fxmisc.richtext.CodeArea;
 
 import java.util.List;
@@ -18,7 +17,9 @@ public class ReverseLineNumberFactory implements IntFunction<Node> {
     public ReverseLineNumberFactory(CodeArea codeArea) {
         this.codeArea = codeArea;
     }
-
+    public static ReverseLineNumberFactory get(CodeArea codeArea){
+        return new ReverseLineNumberFactory(codeArea);
+    }
     @Override
     public Node apply(int paragraphIndex) {
         List<?> paragraphs = codeArea.getParagraphs();
