@@ -52,16 +52,16 @@ jobs:
           jpackage \
             --type dmg \
             --name "K8s Log Viewer" \
-            --input target `
+            --input target \
             --main-jar k8s-log-viewer-1.0.jar \
-            --main-class com.longfor.lmk.k8slogviewer.K8sLogViewer `
-            --icon src/main/resources/mac.icns `
-            --dest target/jpackage `
-            --mac-package-identifier com.longfor.lmk.k8slogviewer `
-            --mac-package-name "K8s Log Viewer" `
-            --app-version 1.0 `
-            --vendor "LMK" `
-            --add-modules javafx.controls,javafx.fxml `
+            --main-class com.longfor.lmk.k8slogviewer.K8sLogViewer \
+            --icon src/main/resources/mac.icns \
+            --dest target/jpackage \
+            --mac-package-identifier com.longfor.lmk.k8slogviewer \
+            --mac-package-name "K8s Log Viewer" \
+            --app-version 1.0 \
+            --vendor "LMK" \
+            --add-modules javafx.controls,javafx.fxml \
             --module-path "/Users/runner/.m2/repository/org/openjfx/javafx-controls/17.0.8/javafx-controls-17.0.8-mac.jar:/Users/runner/.m2/repository/org/openjfx/javafx-fxml/17.0.8/javafx-fxml-17.0.8-mac.jar"
 
       - name: Upload packaged app
