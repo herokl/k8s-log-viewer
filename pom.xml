@@ -11,6 +11,7 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <junit.version>5.10.2</junit.version>
         <javafx.version>17.0.8</javafx.version>
         <slf4j.version>1.7.36</slf4j.version>
@@ -91,6 +92,7 @@
         </dependency>
     </dependencies>
     <build>
+        <finalName>k8s-log-viewer-1.0</finalName>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
