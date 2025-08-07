@@ -136,7 +136,20 @@
 }*/
 
 #settingsButton {
+    /* 强制按钮为固定大小，例如 32x32 像素 */
+    -fx-pref-width: 32px;
+    -fx-pref-height: 32px;
+
+    /* 使用 -fx-graphic 设置图标，
+       这样 JavaFX 会自动将图标居中并缩放以适应按钮大小。
+    */
     -fx-graphic: url("/com/longfor/lmk/k8slogviewer/icons/settings.png");
+
+    /* 移除按钮的默认背景色，使其透明 */
+    -fx-background-color: transparent;
+
+    /* 设置鼠标悬停时的光标样式 */
+    -fx-cursor: hand;
 }
 /*
 #timeRangeButton {

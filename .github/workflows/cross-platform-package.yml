@@ -32,7 +32,7 @@ jobs:
         run: |
           jpackage `
             --type exe `
-            --name "K8s Log Viewer" `
+            --name K8sLogViewer `
             --input target `
             --main-jar k8s-log-viewer-1.0.jar `
             --main-class com.longfor.lmk.k8slogviewer.K8sLogViewer `
@@ -42,16 +42,14 @@ jobs:
             --win-menu `
             --win-shortcut `
             --app-version 1.0 `
-            --vendor "LMK" `
-            --add-modules javafx.controls,javafx.fxml `
-            --module-path "C:/Users/runner/.m2/repository/org/openjfx/javafx-controls/17.0.8/javafx-controls-17.0.8-win.jar;C:/Users/runner/.m2/repository/org/openjfx/javafx-fxml/17.0.8/javafx-fxml-17.0.8-win.jar"
+            --vendor "LMK"
 
       - name: Run jpackage (macOS)
         if: runner.os == 'macOS'
         run: |
           jpackage \
             --type dmg \
-            --name "K8s Log Viewer" \
+            --name K8sLogViewer \
             --input target \
             --main-jar k8s-log-viewer-1.0.jar \
             --main-class com.longfor.lmk.k8slogviewer.K8sLogViewer \
@@ -60,9 +58,7 @@ jobs:
             --mac-package-identifier com.longfor.lmk.k8slogviewer \
             --mac-package-name "K8s Log Viewer" \
             --app-version 1.0 \
-            --vendor "LMK" \
-            --add-modules javafx.controls,javafx.fxml \
-            --module-path "/Users/runner/.m2/repository/org/openjfx/javafx-controls/17.0.8/javafx-controls-17.0.8-mac.jar:/Users/runner/.m2/repository/org/openjfx/javafx-fxml/17.0.8/javafx-fxml-17.0.8-mac.jar"
+            --vendor "LMK"
 
       - name: Upload packaged app
         uses: actions/upload-artifact@v4
