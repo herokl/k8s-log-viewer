@@ -28,14 +28,6 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Set up Maven
-        uses: stCarolas/setup-maven@v4
-        with:
-          maven-version: 3.9.6
-
-      - name: Build fat jar with Maven
-        run: mvn clean package -DskipTests
-
       - name: Create dist directory
         run: mkdir dist
 
