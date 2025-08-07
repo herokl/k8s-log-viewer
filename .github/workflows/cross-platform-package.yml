@@ -32,7 +32,7 @@ jobs:
         run: |
           jpackage `
             --type exe `
-            --name K8sLogViewer `
+            --name "K8s Log Viewer" `
             --input target `
             --main-jar k8s-log-viewer-1.0.jar `
             --main-class com.longfor.lmk.k8slogviewer.K8sLogViewer `
@@ -42,14 +42,15 @@ jobs:
             --win-menu `
             --win-shortcut `
             --app-version 1.0 `
-            --vendor "LMK"
+            --vendor "LMK" `
+            --add-modules javafx.controls,javafx.fxml
 
       - name: Run jpackage (macOS)
         if: runner.os == 'macOS'
         run: |
           jpackage \
             --type dmg \
-            --name K8sLogViewer \
+            --name "K8s Log Viewer" \
             --input target \
             --main-jar k8s-log-viewer-1.0.jar \
             --main-class com.longfor.lmk.k8slogviewer.K8sLogViewer \
@@ -58,7 +59,8 @@ jobs:
             --mac-package-identifier com.longfor.lmk.k8slogviewer \
             --mac-package-name "K8s Log Viewer" \
             --app-version 1.0 \
-            --vendor "LMK"
+            --vendor "LMK" \
+            --add-modules javafx.controls,javafx.fxml
 
       - name: Upload packaged app
         uses: actions/upload-artifact@v4
