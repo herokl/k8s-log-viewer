@@ -8,12 +8,15 @@ import com.longfor.lmk.k8slogviewer.utils.LogStyleUtil;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
@@ -24,6 +27,7 @@ import org.fxmisc.richtext.LineNumberFactory;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Objects;
@@ -261,19 +265,40 @@ public class K8sLogViewerController {
     private void showTimeRangeDialog() {
         Stage dialog = new Stage();
         dialog.initModality(Modality.APPLICATION_MODAL);
-        dialog.setTitle("选择开始时间（至今）");
+        dialog.setTitle("选择日志起始时间");
+        dialog.getIcons().add(new Image(
+                Objects.requireNonNull(getClass().getResourceAsStream("/com/longfor/lmk/k8slogviewer/icons/settings.png"))
+        ));
 
-        VBox dialogPane = new VBox(10);
+        VBox dialogPane = new VBox(15);
         dialogPane.setPadding(new Insets(20));
+        dialogPane.getStyleClass().add("dialog-pane");
 
-        DatePicker startDate = new DatePicker();
+        Label instruction = new Label("从哪天开始查看日志（直到现在）:");
+        instruction.getStyleClass().add("label");
+
+        DatePicker startDate = new DatePicker(LocalDate.now()); // 默认今天
+
+        HBox buttonBox = new HBox(10);
+        buttonBox.setAlignment(Pos.CENTER_RIGHT);
+
+        Button cancelButton = new Button("取消");
+        cancelButton.getStyleClass().add("action-button");
+        cancelButton.setOnAction(e -> dialog.close());
+
         Button applyButton = new Button("应用");
         applyButton.getStyleClass().add("action-button");
 
         applyButton.setOnAction(e -> {
-            LocalDateTime start = startDate.getValue() != null ? startDate.getValue().atStartOfDay() : null;
-            if (start != null) {
-                K8S_QUERY.setSinceSeconds(Duration.between(start, LocalDateTime.now()).getSeconds());
+            LocalDate date = startDate.getValue();
+            if (date != null) {
+                LocalDateTime start = date.atStartOfDay();
+                long seconds = Duration.between(start, LocalDateTime.now()).getSeconds();
+                if (seconds < 0) {
+                    showAlert("错误", "选择的时间不能晚于现在");
+                    return;
+                }
+                K8S_QUERY.setSinceSeconds(seconds);
                 showLogs();
                 dialog.close();
             } else {
@@ -281,17 +306,18 @@ public class K8sLogViewerController {
             }
         });
 
-        dialogPane.getChildren().addAll(
-                new Label("从哪天开始查看日志（直到现在）:"),
-                startDate,
-                applyButton
-        );
+        buttonBox.getChildren().addAll(applyButton, cancelButton);
 
-        Scene dialogScene = new Scene(dialogPane, 300, 150);
+        dialogPane.getChildren().addAll(instruction, startDate, buttonBox);
+
+        Scene dialogScene = new Scene(dialogPane, Region.USE_COMPUTED_SIZE, Region.USE_COMPUTED_SIZE);
         dialogScene.getStylesheets().add(Objects.requireNonNull(getClass().getResource("/styles.css")).toExternalForm());
+
         dialog.setScene(dialogScene);
-        dialog.show();
+        dialog.setResizable(false);
+        dialog.showAndWait();
     }
+
 
     @FXML
     public void searchToggleClick(MouseEvent mouseEvent) {
