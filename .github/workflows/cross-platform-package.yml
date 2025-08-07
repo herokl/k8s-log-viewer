@@ -42,18 +42,18 @@ jobs:
       - name: Run jpackage (Windows)
         if: runner.os == 'Windows'
         run: |
-          jpackage ^
-            --type exe ^
-            --name K8sLogViewer ^
-            --input target ^
-            --main-jar k8s-log-viewer-1.0.jar ^
-            --main-class com.longfor.lmk.k8slogviewer.K8sLogViewer ^
-            --icon src/main/resources/win.ico ^
-            --dest dist ^
-            --win-dir-chooser ^
-            --win-menu ^
-            --win-shortcut ^
-            --app-version 1.0 ^
+          jpackage `
+            --type exe `
+            --name K8sLogViewer `
+            --input target `
+            --main-jar k8s-log-viewer-1.0.jar `
+            --main-class com.longfor.lmk.k8slogviewer.K8sLogViewer `
+            --icon src/main/resources/win.ico `
+            --dest dist `
+            --win-dir-chooser `
+            --win-menu `
+            --win-shortcut `
+            --app-version 1.0 `
             --vendor "LMK"
 
       - name: Run jpackage (macOS)
