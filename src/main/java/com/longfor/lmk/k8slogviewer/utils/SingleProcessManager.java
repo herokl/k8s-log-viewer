@@ -1,6 +1,7 @@
 package com.longfor.lmk.k8slogviewer.utils;
 
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -8,8 +9,9 @@ import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
 
-@Slf4j
 public class SingleProcessManager {
+    private static final Logger log = LoggerFactory.getLogger(SingleProcessManager.class);
+
     private static final AtomicReference<Process> currentProcess = new AtomicReference<>(null);
     private static final Map<Long, ExecutorService> executorMap = new HashMap<>();
 

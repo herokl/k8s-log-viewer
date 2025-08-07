@@ -6,7 +6,6 @@ module com.longfor.lmk.k8slogviewer {
     requires org.kordamp.bootstrapfx.core;
     requires client.java.api;
     requires client.java;
-    requires static lombok;
     requires org.slf4j;
     requires com.google.gson;
     requires java.prefs;

@@ -37,3 +37,4 @@ build/
 .DS_Store
 /.idea/inspectionProfiles/Project_Default.xml
 .idea/
+/target/

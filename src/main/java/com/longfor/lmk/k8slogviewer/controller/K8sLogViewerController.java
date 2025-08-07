@@ -21,9 +21,10 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
-import lombok.extern.slf4j.Slf4j;
 import org.fxmisc.flowless.VirtualizedScrollPane;
 import org.fxmisc.richtext.CodeArea;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.time.Duration;
@@ -37,8 +38,9 @@ import static com.longfor.lmk.k8slogviewer.config.AppConfig.initializeEnvironmen
 import static com.longfor.lmk.k8slogviewer.utils.CommonUtils.showAlert;
 import static com.longfor.lmk.k8slogviewer.utils.CommonUtils.showConfirm;
 
-@Slf4j
 public class K8sLogViewerController {
+    private static final Logger log = LoggerFactory.getLogger(K8sLogViewerController.class);
+
     private static final K8sQuery K8S_QUERY = K8sQuery.builder()
             .contextLines(0)
             .tailLines(1000)

@@ -3,7 +3,8 @@ package com.longfor.lmk.k8slogviewer.utils;
 import com.longfor.lmk.k8slogviewer.config.AppConfig;
 import com.longfor.lmk.k8slogviewer.config.K8sQuery;
 import javafx.application.Platform;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.nio.file.Files;
@@ -13,8 +14,9 @@ import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-@Slf4j
 public class KubectlLogFetcherUtil {
+    private static final Logger log = LoggerFactory.getLogger(KubectlLogFetcherUtil.class);
+
     private static File cachedScriptFile = null;
     private static File extractScriptToTempFile(String resourcePath) throws IOException {
         if (cachedScriptFile != null && cachedScriptFile.exists()) {

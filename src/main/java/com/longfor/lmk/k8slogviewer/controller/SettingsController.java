@@ -6,15 +6,16 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.control.*;
 import javafx.stage.FileChooser;
 import javafx.stage.Window;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.util.Optional;
 
-@Slf4j
 public class SettingsController {
+    private static final Logger log = LoggerFactory.getLogger(SettingsController.class);
 
     @FXML
     private TextField gitBashPathField;

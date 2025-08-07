@@ -10,7 +10,8 @@ import io.kubernetes.client.util.Config;
 import javafx.application.Platform;
 import javafx.scene.control.TreeItem;
 import javafx.stage.Stage;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -21,8 +22,9 @@ import java.util.prefs.Preferences;
 
 import static com.longfor.lmk.k8slogviewer.utils.CommonUtils.showAlert;
 
-@Slf4j
 public class AppConfig {
+    private static final Logger log = LoggerFactory.getLogger(AppConfig.class);
+
     private static final Preferences PREFS = Preferences.userNodeForPackage(AppConfig.class);
     private static final Map<String, Object> ITEM_MAP = new HashMap<>();
     private static final String ROOT_KEY = "root_key";

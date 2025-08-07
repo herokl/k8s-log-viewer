@@ -64,11 +64,6 @@
             <artifactId>client-java</artifactId>
             <version>10.0.0</version>
         </dependency>
-        <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <version>1.18.36</version>
-        </dependency>
         <!-- SLF4J 和 Logback 依赖 -->
         <dependency>
             <groupId>org.slf4j</groupId>

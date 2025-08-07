@@ -2,18 +2,19 @@ package com.longfor.lmk.k8slogviewer.utils;
 
 import com.longfor.lmk.k8slogviewer.config.K8sQuery;
 import javafx.application.Platform;
-import lombok.extern.slf4j.Slf4j;
 import org.fxmisc.richtext.CodeArea;
 import org.fxmisc.richtext.model.StyleSpans;
 import org.fxmisc.richtext.model.StyleSpansBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
 import java.util.Collections;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-@Slf4j
 public class LogStyleUtil {
+    private static final Logger log = LoggerFactory.getLogger(LogStyleUtil.class);
 
     public static final String PLAIN_TEXT = "plain-text";
 
