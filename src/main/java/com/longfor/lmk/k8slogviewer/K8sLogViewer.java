@@ -8,6 +8,7 @@ import javafx.scene.image.Image;
 import javafx.stage.Stage;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.Objects;
 
 public class K8sLogViewer extends Application {
@@ -26,6 +27,18 @@ public class K8sLogViewer extends Application {
     }
 
     public static void main(String[] args) {
-        launch(args);
+        try {
+            launch(args);
+        } catch (Exception e) {
+            writeErrorToFile(e); // 写入日志
+        }
+    }
+
+    private static void writeErrorToFile(Exception e) {
+        try (PrintWriter writer = new PrintWriter("error.log")) {
+            e.printStackTrace(writer);
+        } catch (IOException ioException) {
+            ioException.fillInStackTrace();
+        }
     }
 }
