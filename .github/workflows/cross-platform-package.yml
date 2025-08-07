@@ -9,6 +9,7 @@ jobs:
   build:
     name: Build and Package on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 90 # ✨ 新增：设置作业超时时间为 90 分钟
     strategy:
       matrix:
         os: [windows-latest, macos-latest]
