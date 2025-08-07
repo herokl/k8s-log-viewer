@@ -43,7 +43,8 @@ jobs:
             --win-shortcut `
             --app-version 1.0 `
             --vendor "LMK" `
-            --add-modules javafx.controls,javafx.fxml
+            --add-modules javafx.controls,javafx.fxml `
+            --module-path "C:/Users/runner/.m2/repository/org/openjfx/javafx-controls/17.0.8/javafx-controls-17.0.8-win.jar;C:/Users/runner/.m2/repository/org/openjfx/javafx-fxml/17.0.8/javafx-fxml-17.0.8-win.jar"
 
       - name: Run jpackage (macOS)
         if: runner.os == 'macOS'
@@ -60,7 +61,8 @@ jobs:
             --mac-package-name "K8s Log Viewer" \
             --app-version 1.0 \
             --vendor "LMK" \
-            --add-modules javafx.controls,javafx.fxml
+            --add-modules javafx.controls,javafx.fxml \
+            --module-path /Users/runner/.m2/repository/org/openjfx/javafx-controls/17.0.8/javafx-controls-17.0.8-mac.jar:/Users/runner/.m2/repository/org/openjfx/javafx-fxml/17.0.8/javafx-fxml-17.0.8-mac.jar
 
       - name: Upload packaged app
         uses: actions/upload-artifact@v4
