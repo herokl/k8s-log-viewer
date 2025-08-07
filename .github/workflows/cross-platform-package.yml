@@ -37,7 +37,7 @@ jobs:
             --main-jar k8s-log-viewer-1.0.jar `
             --main-class com.longfor.lmk.k8slogviewer.K8sLogViewer `
             --icon src/main/resources/win.ico `
-            --dest dist `
+            --dest target/jpackage `
             --win-dir-chooser `
             --win-menu `
             --win-shortcut `
@@ -54,7 +54,7 @@ jobs:
             --main-jar k8s-log-viewer-1.0.jar \
             --main-class com.longfor.lmk.k8slogviewer.K8sLogViewer \
             --icon src/main/resources/mac.icns \
-            --dest dist \
+            --dest target/jpackage \
             --mac-package-identifier com.longfor.lmk.k8slogviewer \
             --mac-package-name "K8s Log Viewer" \
             --app-version 1.0 \
@@ -64,4 +64,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: k8slogviewer-${{ runner.os }}
-          path: dist
+          path: target/jpackage
