@@ -1,5 +1,6 @@
 package com.longfor.lmk.k8slogviewer.config;
 
+import com.longfor.lmk.k8slogviewer.utils.LogFileWriter;
 import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.Configuration;
@@ -34,6 +35,14 @@ public class AppConfig {
     public static final String MAIN_STAGE = "mainStage";
 
     private AppConfig() {
+    }
+
+    public static LogFileWriter getLogFileWriter(String containerName) throws IOException {
+        LogFileWriter logFileWriter = (LogFileWriter)ITEM_MAP.get(containerName);
+        if (logFileWriter != null) return logFileWriter;
+        logFileWriter = new LogFileWriter("logs/" + containerName + ".log");
+        ITEM_MAP.put(containerName, logFileWriter);
+        return logFileWriter;
     }
 
     /**
@@ -79,15 +88,15 @@ public class AppConfig {
         return root;
     }
 
-    public static void clearRootItem(){
+    public static void clearRootItem() {
         ITEM_MAP.remove(ROOT_KEY);
     }
 
-    public static Stage getMainStage(){
+    public static Stage getMainStage() {
         return (Stage) ITEM_MAP.get(MAIN_STAGE);
     }
 
-    public static void setMainStage(Stage stage){
+    public static void setMainStage(Stage stage) {
         ITEM_MAP.put(MAIN_STAGE, stage);
     }
 
@@ -110,7 +119,7 @@ public class AppConfig {
                 if (pod.getMetadata() != null) {
                     podName = pod.getMetadata().getName();
                 }
-                if(podName != null) {
+                if (podName != null) {
                     TreeItem<String> podItem = new TreeItem<>(podName);
                     nsItem.getChildren().add(podItem);
                 }
