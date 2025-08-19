@@ -12,7 +12,7 @@
     <!-- 左侧菜单 -->
     <left>
         <VBox styleClass="left-menu" alignment="BOTTOM_LEFT" spacing="10" VBox.vgrow="ALWAYS"
-              style="-fx-background-color: #f4f6f8; -fx-min-width: 30;">
+              style="-fx-background-color: #f4f6f8; -fx-min-width: 20;">
             <padding>
                 <Insets top="10" right="10" bottom="10" left="10"/>
             </padding>
