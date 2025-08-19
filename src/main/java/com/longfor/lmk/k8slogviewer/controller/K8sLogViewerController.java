@@ -41,13 +41,6 @@ import static com.longfor.lmk.k8slogviewer.utils.CommonUtils.showConfirm;
 public class K8sLogViewerController {
     private static final Logger log = LoggerFactory.getLogger(K8sLogViewerController.class);
 
-    private static final K8sQuery K8S_QUERY = K8sQuery.builder()
-            .contextLines(0)
-            .tailLines(1000)
-            .sinceSeconds(0)
-            .follow(true)
-            .searchRunning(true)
-            .build();
     @FXML
     public ProgressIndicator loadingIndicator;
     @FXML
@@ -104,11 +97,12 @@ public class K8sLogViewerController {
         } catch (Exception e) {
             Platform.runLater(() -> showAlert("错误", "无法加载设置图标: " + e.getMessage()));
         }
-        K8S_QUERY.setContextLines(0);
+        K8sQuery k8sQuery = AppConfig.getK8sQuery();
+        k8sQuery.setContextLines(0);
 
         tailField.setPromptText("尾行数");
         tailField.setText(String.valueOf(1000));
-        K8S_QUERY.setTailLines(1000);
+        k8sQuery.setTailLines(1000);
 
         searchButton.setText("搜索");
         searchButton.getStyleClass().add("action-button");
@@ -144,8 +138,8 @@ public class K8sLogViewerController {
                 Platform.runLater(() -> showAlert("错误", "请输入大于等于0的数字"));
             } else {
                 int num = Integer.parseInt(newVal);
-                K8S_QUERY.setFollow(num == 0);
-                K8S_QUERY.setContextLines(num);
+                k8sQuery.setFollow(num == 0);
+                k8sQuery.setContextLines(num);
             }
         });
         // 截取日志多少行监听
@@ -157,12 +151,12 @@ public class K8sLogViewerController {
             } else {
                 int num = Integer.parseInt(newVal);
                 if (num != 0) {
-                    K8S_QUERY.setTailLines(num);
+                    k8sQuery.setTailLines(num);
                     return;
                 }
                 // 输入为0时，弹出确认提示
                 Platform.runLater(() -> showConfirm("提示", "尾行数为 0|null 会非常卡，是否继续？",
-                        () -> K8S_QUERY.setTailLines(0),
+                        () -> k8sQuery.setTailLines(0),
                         () -> tailField.setText(oldVal)));
             }
         });
@@ -182,11 +176,11 @@ public class K8sLogViewerController {
                     String podName = newVal.getValue();
 
                     log.info("选择命名空间: {}, Pod: {}", namespace, podName);
-                    K8S_QUERY.setNamespace(namespace);
-                    K8S_QUERY.setPodName(podName);
+                    k8sQuery.setNamespace(namespace);
+                    k8sQuery.setPodName(podName);
                     String text = logSearchField.getText();
                     if (text != null && !text.isEmpty()) {
-                        K8S_QUERY.setKeyword(text);
+                        k8sQuery.setKeyword(text);
                     }
                     showLogs();
                 }
@@ -199,9 +193,10 @@ public class K8sLogViewerController {
 
     private void showLogs() {
         try {
-            K8S_QUERY.setHeaderCaptured(true);
-            K8S_QUERY.setCodeAreas(Arrays.asList(logArea, headerArea));
-            KubectlLogFetcherUtil.fetchStreaming(K8S_QUERY, "/scripts/search_logs.sh", line -> LogStyleUtil.appendHighlightedLine(headerArea, logArea, line, K8S_QUERY));
+            K8sQuery query = AppConfig.getK8sQuery();
+            query.setHeaderCaptured(true);
+            query.setCodeAreas(Arrays.asList(logArea, headerArea));
+            KubectlLogFetcherUtil.fetchStreaming("/scripts/search_logs.sh", line -> LogStyleUtil.appendHighlightedLine(headerArea, logArea, line));
         } catch (IOException e) {
             log.error("获取日志失败: {}", e.getMessage());
             Platform.runLater(() -> showAlert("错误", "无法获取日志: " + e.getMessage()));
@@ -235,7 +230,7 @@ public class K8sLogViewerController {
 
     @FXML
     public void searchButtonClick(MouseEvent mouseEvent) {
-        K8S_QUERY.setKeyword(logSearchField.getText());
+        AppConfig.getK8sQuery().setKeyword(logSearchField.getText());
         showLogs();
     }
 
@@ -307,7 +302,7 @@ public class K8sLogViewerController {
                     showAlert("错误", "选择的时间不能晚于现在");
                     return;
                 }
-                K8S_QUERY.setSinceSeconds(seconds);
+                AppConfig.getK8sQuery().setSinceSeconds(seconds);
                 showLogs();
                 dialog.close();
             } else {
@@ -330,8 +325,9 @@ public class K8sLogViewerController {
 
     @FXML
     public void searchToggleClick(MouseEvent mouseEvent) {
-        boolean searchRunning = !K8S_QUERY.isSearchRunning();
-        K8S_QUERY.setSearchRunning(searchRunning);
+        K8sQuery k8sQuery = AppConfig.getK8sQuery();
+        boolean searchRunning = !k8sQuery.isSearchRunning();
+        k8sQuery.setSearchRunning(searchRunning);
         // 暂停滚动控制
         searchToggleButton.setText(searchRunning ? "暂停" : "恢复");
     }

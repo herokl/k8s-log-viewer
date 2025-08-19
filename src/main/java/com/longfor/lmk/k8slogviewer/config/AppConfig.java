@@ -25,7 +25,13 @@ import static com.longfor.lmk.k8slogviewer.utils.CommonUtils.showAlert;
 
 public class AppConfig {
     private static final Logger log = LoggerFactory.getLogger(AppConfig.class);
-
+    private static final K8sQuery K8S_QUERY = K8sQuery.builder()
+            .contextLines(0)
+            .tailLines(1000)
+            .sinceSeconds(0)
+            .follow(true)
+            .searchRunning(true)
+            .build();
     private static final Preferences PREFS = Preferences.userNodeForPackage(AppConfig.class);
     private static final Map<String, Object> ITEM_MAP = new HashMap<>();
     private static final String ROOT_KEY = "root_key";
@@ -37,10 +43,14 @@ public class AppConfig {
     private AppConfig() {
     }
 
+    public static K8sQuery getK8sQuery() {
+        return K8S_QUERY;
+    }
+
     public static LogFileWriter getLogFileWriter(String containerName) throws IOException {
         LogFileWriter logFileWriter = (LogFileWriter)ITEM_MAP.get(containerName);
         if (logFileWriter != null) return logFileWriter;
-        logFileWriter = new LogFileWriter("logs/" + containerName + ".log");
+        logFileWriter = new LogFileWriter("logs/temp-" + containerName + ".log");
         ITEM_MAP.put(containerName, logFileWriter);
         return logFileWriter;
     }

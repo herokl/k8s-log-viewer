@@ -1,5 +1,6 @@
 package com.longfor.lmk.k8slogviewer.utils;
 
+import com.longfor.lmk.k8slogviewer.config.AppConfig;
 import com.longfor.lmk.k8slogviewer.config.K8sQuery;
 import javafx.application.Platform;
 import org.fxmisc.richtext.CodeArea;
@@ -22,7 +23,8 @@ public class LogStyleUtil {
     }
 
     // 追加一行日志并高亮指定关键字
-    public static void appendHighlightedLine(CodeArea headerArea, CodeArea logArea, String line, K8sQuery k8sQuery) {
+    public static void appendHighlightedLine(CodeArea headerArea, CodeArea logArea, String line) {
+        K8sQuery k8sQuery = AppConfig.getK8sQuery();
         String keyword = k8sQuery.getKeyword();
         boolean searchRunning = k8sQuery.isSearchRunning();
         boolean headerCaptured = k8sQuery.isHeaderCaptured();

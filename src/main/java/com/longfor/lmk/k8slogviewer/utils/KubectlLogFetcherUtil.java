@@ -17,6 +17,9 @@ import java.util.stream.Collectors;
 public class KubectlLogFetcherUtil {
     private static final Logger log = LoggerFactory.getLogger(KubectlLogFetcherUtil.class);
 
+    private KubectlLogFetcherUtil() {
+    }
+
     private static File cachedScriptFile = null;
     private static File extractScriptToTempFile(String resourcePath) throws IOException {
         if (cachedScriptFile != null && cachedScriptFile.exists()) {
@@ -51,7 +54,8 @@ public class KubectlLogFetcherUtil {
         };
     }
 
-    public static String fetchOnce(K8sQuery query, String resourceScriptPath) throws IOException {
+    public static String fetchOnce(String resourceScriptPath) throws IOException {
+        K8sQuery query = AppConfig.getK8sQuery();
         if (query.isFollow()) {
             throw new IllegalArgumentException("follow=true 不支持同步模式");
         }
@@ -60,7 +64,8 @@ public class KubectlLogFetcherUtil {
         return runShellCommand(cmd);
     }
 
-    public static void fetchStreaming(K8sQuery query, String resourceScriptPath, Consumer<String> logLineConsumer) throws IOException {
+    public static void fetchStreaming(String resourceScriptPath, Consumer<String> logLineConsumer) throws IOException {
+        K8sQuery query = AppConfig.getK8sQuery();
         File scriptFile = extractScriptToTempFile(resourceScriptPath);
         String[] cmd = buildCommandArgs(query, scriptFile.getAbsolutePath());
         log.info("执行命令: {}", String.join(" ", cmd));
