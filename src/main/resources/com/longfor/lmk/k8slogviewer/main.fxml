@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.geometry.*?>
+<?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import org.fxmisc.richtext.CodeArea?>
@@ -23,27 +23,32 @@
 
     <!-- 中间和右侧使用 SplitPane -->
     <center>
-        <SplitPane dividerPositions="0.3" SplitPane.resizableWithParent="true">
-            <!-- 中间树视图 -->
-            <VBox spacing="10" styleClass="tree-pane">
-                <padding>
-                    <Insets top="10" right="10" bottom="10" left="10"/>
-                </padding>
-
-                <HBox spacing="10">
+        <SplitPane fx:id="splitPane" dividerPositions="0.3" SplitPane.resizableWithParent="true">
+            <!-- 左侧树视图 + 折叠条 -->
+            <HBox fx:id="treePaneWrapper" spacing="0">
+                <!-- 左侧树视图 -->
+                <VBox fx:id="treePane" spacing="10" styleClass="tree-pane" HBox.hgrow="ALWAYS">
                     <padding>
-                        <Insets bottom="10"/>
+                        <Insets top="10" right="10" bottom="10" left="10"/>
                     </padding>
 
-                    <TextField fx:id="searchField" promptText="搜索命名空间/Pod/容器..."
-                               HBox.hgrow="ALWAYS" styleClass="text-field"/>
-                    <Button fx:id="refreshButton" text="刷新" styleClass="action-button"
-                            onMouseClicked="#refreshOnClick"/>
-                    <ProgressIndicator fx:id="loadingIndicator" visible="false" maxWidth="20" maxHeight="20"/>
-                </HBox>
+                    <HBox spacing="10">
+                        <TextField fx:id="searchField" promptText="搜索命名空间/Pod/容器..."
+                                   HBox.hgrow="ALWAYS" styleClass="text-field"/>
+                        <Button fx:id="refreshButton" text="刷新" styleClass="action-button"
+                                onMouseClicked="#refreshOnClick"/>
+                        <ProgressIndicator fx:id="loadingIndicator" visible="false" maxWidth="20" maxHeight="20"/>
+                    </HBox>
 
-                <TreeView fx:id="treeView" styleClass="tree-view" VBox.vgrow="ALWAYS"/>
-            </VBox>
+                    <TreeView fx:id="treeView" styleClass="tree-view" VBox.vgrow="ALWAYS"/>
+                </VBox>
+
+                <!-- 折叠条 -->
+                <VBox fx:id="collapseBar" prefWidth="16" style="-fx-background-color: #e0e0e0; -fx-cursor: hand;"
+                      alignment="CENTER" onMouseClicked="#toggleTreePane">
+                    <Label fx:id="collapseArrow" text="⯈" style="-fx-font-size: 12; -fx-text-fill: #666666;"/>
+                </VBox>
+            </HBox>
 
             <!-- 右侧日志窗口 -->
             <VBox spacing="10" styleClass="log-pane">

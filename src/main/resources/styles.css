@@ -20,7 +20,7 @@
     -fx-border-color: #CFD8DC;
     -fx-border-radius: 5px;
     -fx-padding: 10px;
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 5, 0, 0, 2);
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.1), 5, 0, 0, 2);
 }
 
 /* 树视图样式 */
@@ -31,13 +31,21 @@
     -fx-border-radius: 3px;
 }
 
+#collapseBar {
+    -fx-background-color: #e0e0e0;
+}
+
+#collapseBar:hover {
+    -fx-background-color: #cccccc;
+}
+
 /* 日志面板 */
 .log-pane {
     -fx-background-color: #FFFFFF;
     -fx-border-color: #CFD8DC;
     -fx-border-radius: 5px;
     -fx-padding: 10px;
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 5, 0, 0, 2);
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.1), 5, 0, 0, 2);
 }
 
 /* 日志显示区域 */
@@ -66,21 +74,26 @@
 
 /* 默认文本 */
 .plain-text {
-    -fx-fill: #E0E0E0; /* 浅灰白色，适合深色背景 */
+    -fx-fill: #E0E0E0;
     -fx-font-size: 14px;
 }
 
 /* 关键字高亮 */
-.highlight {
-    -fx-fill: #000000; /* 黑色文字 */
-    -rtfx-background-color: #FFC107; /* 明亮黄色，适合深色主题 */
-    -fx-background-color: #FFC107;
+.log-highlight {
+    -fx-fill: #E0E0E0;
+    -rtfx-background-color: #c95050;
+    -fx-font-size: 14px;
+}
+
+.search-highlight {
+    -fx-fill: #000000;
+    -rtfx-background-color: #FFC107;
     -fx-font-size: 14px;
 }
 
 /* 行号样式 */
 .line-number {
-    -fx-background-color: #2D2D2D; /* 稍亮深灰色，与 .log-area 区分 */
+    -fx-background-color: #2D2D2D;
     -fx-text-fill: #E0E0E0;
     -fx-padding: 0 10 0 6;
     -fx-font-size: 12px;
@@ -102,7 +115,7 @@
     -fx-border-color: #CFD8DC;
     -fx-border-radius: 4px;
     -fx-padding: 6 8px;
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.05), 3, 0, 0, 1);
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.05), 3, 0, 0, 1);
 }
 
 .text-field:focused {
@@ -117,7 +130,7 @@
     -fx-padding: 8 16;
     -fx-background-radius: 5px;
     -fx-border-radius: 5px;
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 5, 0, 0, 2);
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.15), 5, 0, 0, 2);
     -fx-font-size: 14px;
     -fx-cursor: hand;
 }
@@ -151,6 +164,7 @@
     /* 设置鼠标悬停时的光标样式 */
     -fx-cursor: hand;
 }
+
 /*
 #timeRangeButton {
     -fx-graphic: url("/com/longfor/lmk/k8slogviewer/icons/time.png");
@@ -171,5 +185,5 @@
     -fx-background-color: #ffffff;
     -fx-border-radius: 10;
     -fx-background-radius: 10;
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 10, 0, 0, 3);
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.2), 10, 0, 0, 3);
 }

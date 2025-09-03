@@ -20,6 +20,7 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import org.fxmisc.flowless.VirtualizedScrollPane;
 import org.fxmisc.richtext.CodeArea;
+import org.fxmisc.richtext.model.StyleSpans;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,10 +28,10 @@ import java.io.IOException;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.function.IntFunction;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -38,6 +39,7 @@ import java.util.regex.Pattern;
 import static com.longfor.lmk.k8slogviewer.config.AppConfig.initializeEnvironment;
 import static com.longfor.lmk.k8slogviewer.utils.CommonUtils.showAlert;
 import static com.longfor.lmk.k8slogviewer.utils.CommonUtils.showConfirm;
+import static com.longfor.lmk.k8slogviewer.utils.LogStyleUtil.SEPARATOR_LINE;
 
 public class K8sLogViewerController {
     private static final Logger log = LoggerFactory.getLogger(K8sLogViewerController.class);
@@ -76,10 +78,15 @@ public class K8sLogViewerController {
     private HBox searchBar;
     @FXML
     private TextField inlineSearchField;
-    private int lastSearchIndex = -1;
     private String lastKeyword = "";
     private final List<int[]> matchPositions = new ArrayList<>(); // 保存所有匹配起止位置
     private int currentMatchIndex = 0;         // 当前高亮匹配编号
+
+    @FXML
+    private Label matchCountLabel;
+
+    private ScheduledExecutorService debounceExecutor = Executors.newSingleThreadScheduledExecutor();
+    private Runnable pendingHighlightTask;  // OPTIMIZE: 用于debounce的任务
 
     @FXML
     public void initialize() throws IOException {
@@ -206,10 +213,14 @@ public class K8sLogViewerController {
 
         // 初始加载树
         refreshTree(null);
-    }
 
-    @FXML
-    private Label matchCountLabel;
+        // OPTIMIZE: 修改监听器为debounce版本
+        inlineSearchField.textProperty().addListener((obs, oldVal, newVal) -> {
+            if (searchBar.isVisible() && !newVal.equals(oldVal)) {
+                debounceComputeAllMatches(newVal);
+            }
+        });
+    }
 
     /**
      * 初始化内联搜索栏
@@ -300,13 +311,65 @@ public class K8sLogViewerController {
         if (show) {
             inlineSearchField.requestFocus();
             inlineSearchField.selectAll();
+            // 立即计算当前关键字
+            computeAllMatchesInBackground(inlineSearchField.getText());
         } else {
-            logArea.clearStyle(0, logArea.getLength());
-            lastSearchIndex = -1;
-            lastKeyword = "";
+            // 清空
             matchPositions.clear();
             currentMatchIndex = 0;
+            lastKeyword = "";
+            // 移除搜索高亮，保留日志高亮
+            rehighlightLogArea(false);
         }
+    }
+
+    // OPTIMIZE: 新方法，debounce关键字变化，延迟300ms执行
+    private void debounceComputeAllMatches(String keyword) {
+        if (pendingHighlightTask != null) {
+            // 取消上一个任务
+            debounceExecutor.shutdownNow();
+            debounceExecutor = Executors.newSingleThreadScheduledExecutor();
+        }
+
+        pendingHighlightTask = () -> computeAllMatchesInBackground(keyword);
+        debounceExecutor.schedule(pendingHighlightTask, 300, TimeUnit.MILLISECONDS);
+    }
+
+    // OPTIMIZE: 新方法，在背景线程计算匹配和样式，然后UI应用
+    private void computeAllMatchesInBackground(String keyword) {
+        Executors.newSingleThreadExecutor().execute(() -> {
+            List<int[]> tempMatchPositions = new ArrayList<>();
+            boolean includeSearch = keyword != null && !keyword.isBlank();
+            String text = logArea.getText();  // 注意：getText()是线程安全的，但大文本时耗时
+            String logKw = AppConfig.getK8sQuery().getKeyword();
+            String searchKw = includeSearch ? keyword : null;
+
+            if (includeSearch) {
+                String lowerText = text.toLowerCase();
+                String lowerKw = keyword.toLowerCase();
+                int idx = 0;
+                while ((idx = lowerText.indexOf(lowerKw, idx)) != -1) {
+                    tempMatchPositions.add(new int[]{idx, idx + lowerKw.length()});
+                    idx += lowerKw.length();
+                }
+            }
+
+            // 计算全量spans（在背景线程）
+            StyleSpans<Collection<String>> spans = LogStyleUtil.computeHighlighting(false, text, logKw, searchKw);
+
+            // 应用到UI
+            Platform.runLater(() -> {
+                matchPositions.clear();
+                matchPositions.addAll(tempMatchPositions);
+                lastKeyword = keyword != null ? keyword : "";
+                logArea.setStyleSpans(0, spans);
+                updateMatchLabel();
+                if (!matchPositions.isEmpty()) {
+                    currentMatchIndex = 0;
+                    selectCurrentMatch();
+                }
+            });
+        });
     }
 
     // ----------------- 计算所有匹配 -----------------
@@ -326,7 +389,8 @@ public class K8sLogViewerController {
     // ----------------- 高亮匹配 -----------------
     private void highlightAllMatches(String keyword) {
         String text = logArea.getText();
-        logArea.setStyleSpans(0, LogStyleUtil.computeHighlighting(false, text, keyword));
+        String logKw = AppConfig.getK8sQuery().getKeyword();
+        logArea.setStyleSpans(0, LogStyleUtil.computeHighlighting(false, text, logKw, keyword));
     }
 
     // ----------------- 选择当前匹配 -----------------
@@ -347,32 +411,28 @@ public class K8sLogViewerController {
         }
     }
 
-    /**
-     * 增量刷新匹配（不会清空原有样式）
-     */
-    private void refreshMatchesIncremental() {
-        String keyword = inlineSearchField.getText();
+    // OPTIMIZE: 修改rehighlightLogArea为背景线程版本（类似computeAllMatchesInBackground）
+    private void rehighlightLogArea(boolean includeSearch) {
+        Executors.newSingleThreadExecutor().execute(() -> {
+            String text = logArea.getText();
+            String logKw = AppConfig.getK8sQuery().getKeyword();
+            String searchKw = includeSearch ? inlineSearchField.getText() : null;
+            if (searchKw != null && searchKw.isBlank()) searchKw = null;
+            StyleSpans<Collection<String>> spans = LogStyleUtil.computeHighlighting(false, text, logKw, searchKw);
+            Platform.runLater(() -> logArea.setStyleSpans(0, spans));
+        });
+    }
+
+    // OPTIMIZE: 刷新匹配增量（只新行）
+    private void refreshMatchesIncremental(int offset, String newText, String keyword) {
         if (keyword == null || keyword.isEmpty()) return;
 
-        // 新增的文本
-        String text = logArea.getText();
-        Matcher matcher = Pattern.compile(Pattern.quote(keyword), Pattern.CASE_INSENSITIVE).matcher(text);
-
-        while (matcher.find()) {
-            int start = matcher.start();
-            int end = matcher.end();
-            // 只添加新的匹配位置
-            if (matchPositions.isEmpty() || start > matchPositions.get(matchPositions.size() - 1)[1]) {
-                matchPositions.add(new int[]{start, end});
-            }
-        }
-
-        // 高亮所有匹配
-        highlightAllMatches(keyword);
-
-        // 保持 currentMatchIndex 不变或者更新
-        if (!matchPositions.isEmpty() && currentMatchIndex >= matchPositions.size()) {
-            currentMatchIndex = matchPositions.size() - 1;
+        String lowerNewText = newText.toLowerCase();
+        String lowerKw = keyword.toLowerCase();
+        int idx = 0;
+        while ((idx = lowerNewText.indexOf(lowerKw, idx)) != -1) {
+            matchPositions.add(new int[]{offset + idx, offset + idx + lowerKw.length()});
+            idx += lowerKw.length();
         }
         updateMatchLabel();
     }
@@ -384,9 +444,53 @@ public class K8sLogViewerController {
             query.setCodeAreas(Arrays.asList(logArea, headerArea));
             KubectlLogFetcherUtil.fetchStreaming("/scripts/search_logs.sh",
                     line -> {
-                        LogStyleUtil.appendHighlightedLine(headerArea, logArea, line);
-                        // 增量刷新匹配
-                        Platform.runLater(this::refreshMatchesIncremental);
+                        // OPTIMIZE: 合并到单个runLater，处理追加、高亮、增量匹配
+                        Platform.runLater(() -> {
+                            K8sQuery k8sQuery = AppConfig.getK8sQuery();
+                            boolean searchRunning = k8sQuery.isSearchRunning();
+                            boolean headerCaptured = k8sQuery.isHeaderCaptured();
+                            String lineWithNewline = line + "\n";
+                            String logKeyword = k8sQuery.getKeyword();
+                            String searchKeyword = searchBar.isVisible() ? inlineSearchField.getText() : null;
+                            if (searchKeyword != null && searchKeyword.isBlank()) searchKeyword = null;
+
+                            if (headerCaptured) {
+                                boolean contains = line.trim().contains(SEPARATOR_LINE);
+                                k8sQuery.setHeaderCaptured(!contains);
+                                if (!contains) {
+                                    // header无搜索高亮
+                                    LogStyleUtil.setLogArea(headerArea, true, line, lineWithNewline, logKeyword, null);
+                                }
+                            } else {
+                                LogStyleUtil.setLogArea(logArea, false, line, lineWithNewline, logKeyword, searchKeyword);
+                                // OPTIMIZE: 增量匹配（只新行）
+                                if (searchKeyword != null) {
+                                    int offset = logArea.getLength() - lineWithNewline.length();
+                                    refreshMatchesIncremental(offset, lineWithNewline, searchKeyword);
+                                }
+                            }
+                            if (searchRunning) {
+                                logArea.moveTo(logArea.getLength());
+                                logArea.requestFollowCaret();
+                            }
+                            // OPTIMIZE: 可选 - 添加最大行限制
+                            // private static final int MAX_LINES = 10000;
+                            // String fullText = logArea.getText();
+                            // String[] lines = fullText.split("\n");
+                            // if (lines.length > MAX_LINES) {
+                            //     int removeLines = lines.length - MAX_LINES;
+                            //     int removeLength = 0;
+                            //     for (int i = 0; i < removeLines; i++) {
+                            //         removeLength += lines[i].length() + 1;
+                            //     }
+                            //     logArea.deleteText(0, removeLength);
+                            //     // 调整matchPositions
+                            //     final int finalRemove = removeLength;
+                            //     matchPositions.removeIf(pos -> pos[1] <= finalRemove);
+                            //     matchPositions.forEach(pos -> { pos[0] -= finalRemove; pos[1] -= finalRemove; });
+                            //     updateMatchLabel();
+                            // }
+                        });
                     });
         } catch (IOException e) {
             log.error("获取日志失败: {}", e.getMessage());
@@ -518,4 +622,36 @@ public class K8sLogViewerController {
         // 暂停滚动控制
         searchToggleButton.setText(searchRunning ? "暂停" : "恢复");
     }
+
+    @FXML
+    private VBox treePane;
+
+    @FXML
+    private Label collapseArrow;
+
+    @FXML
+    private SplitPane splitPane;
+
+    private boolean isTreePaneVisible = true;  // 当前状态
+    private double lastDividerPosition = 0.3;  // 折叠前宽度比例
+
+    @FXML
+    private void toggleTreePane() {
+        if (isTreePaneVisible) {
+            // 隐藏 treePane
+            treePane.setVisible(false);
+            treePane.setManaged(false);
+            splitPane.setDividerPositions(0.0); // 右侧占满
+            collapseArrow.setText("⯇");           // 箭头指向右
+            isTreePaneVisible = false;
+        } else {
+            // 显示 treePane
+            treePane.setVisible(true);
+            treePane.setManaged(true);
+            splitPane.setDividerPositions(lastDividerPosition);
+            collapseArrow.setText("⯈");           // 箭头指向左
+            isTreePaneVisible = true;
+        }
+    }
+
 }
