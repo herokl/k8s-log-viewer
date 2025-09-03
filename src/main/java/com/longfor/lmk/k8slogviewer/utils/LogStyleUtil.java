@@ -62,19 +62,36 @@ public class LogStyleUtil {
     }
 
     // 高亮逻辑：将所有匹配的关键字添加 "highlight" 样式
-    private static StyleSpans<Collection<String>> computeHighlighting(boolean header, String text, String keyword) {
-        String pattern = "\\b" + Pattern.quote(keyword) + "\\b";
+    /**
+     * 日志高亮匹配方法
+     *
+     * @param header   是否是日志头部
+     * @param text     要搜索的原始文本
+     * @param keyword  搜索关键字（模糊匹配）
+     * @return         高亮样式
+     */
+    public static StyleSpans<Collection<String>> computeHighlighting(boolean header, String text, String keyword) {
+        // 直接使用子串匹配（模糊匹配），忽略大小写
+        String pattern = Pattern.quote(keyword);
         Matcher matcher = Pattern.compile(pattern, Pattern.CASE_INSENSITIVE).matcher(text);
+
         StyleSpansBuilder<Collection<String>> spansBuilder = new StyleSpansBuilder<>();
         int lastKwEnd = 0;
+
         while (matcher.find()) {
+            // 添加关键字前的普通文本样式
             spansBuilder.add(Collections.singleton(header ? LOG_HEADER : PLAIN_TEXT), matcher.start() - lastKwEnd);
+            // 添加关键字高亮样式
             spansBuilder.add(Collections.singleton("highlight"), matcher.end() - matcher.start());
             lastKwEnd = matcher.end();
         }
+
+        // 添加最后剩余的普通文本
         spansBuilder.add(Collections.singleton(header ? LOG_HEADER : PLAIN_TEXT), text.length() - lastKwEnd);
+
         return spansBuilder.create();
     }
+
 
     // 可选：清除样式（例如在新搜索前）
     public static void clear(CodeArea codeArea) {

@@ -42,15 +42,15 @@
 
 /* 日志显示区域 */
 .log-area {
-    -fx-background-color: #1E1E1E; /* 深灰色背景，VS Code 风格 */
-    -fx-text-fill: #E0E0E0; /* 浅灰白色文本 */
+    -fx-fill: #E0E0E0;
+    -fx-font-size: 14px;
+    -fx-background-color: #1E1E1E;
     -fx-padding: 10px;
-    -fx-border-color: #326CE5; /* Kubernetes 蓝色边框 */
+    -fx-border-color: #326CE5;
     -fx-border-width: 1;
     -fx-border-radius: 5px;
-    -fx-control-inner-background: #1E1E1E; /* RichTextFX 背景 */
+    -fx-control-inner-background: #1E1E1E;
     -fx-font-family: "JetBrains Mono", "Courier New", monospace;
-    -fx-font-size: 14px;
 }
 
 

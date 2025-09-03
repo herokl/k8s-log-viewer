@@ -37,7 +37,8 @@
 
                     <TextField fx:id="searchField" promptText="搜索命名空间/Pod/容器..."
                                HBox.hgrow="ALWAYS" styleClass="text-field"/>
-                    <Button fx:id="refreshButton" text="刷新" styleClass="action-button" onMouseClicked="#refreshOnClick"/>
+                    <Button fx:id="refreshButton" text="刷新" styleClass="action-button"
+                            onMouseClicked="#refreshOnClick"/>
                     <ProgressIndicator fx:id="loadingIndicator" visible="false" maxWidth="20" maxHeight="20"/>
                 </HBox>
 
@@ -59,7 +60,8 @@
 
                         <TextField fx:id="logSearchField" promptText="搜索日志..."
                                    HBox.hgrow="ALWAYS" prefWidth="180" styleClass="text-field"/>
-                        <Button fx:id="searchButton" text="搜索" styleClass="action-button" onMouseClicked="#searchButtonClick"/>
+                        <Button fx:id="searchButton" text="搜索" styleClass="action-button"
+                                onMouseClicked="#searchButtonClick"/>
                     </HBox>
 
                     <!-- 第二行：上下文行数、尾行数、暂停/恢复搜索、时间范围 -->
@@ -68,7 +70,8 @@
                         <TextField fx:id="contextField" prefWidth="80" styleClass="text-field"/>
                         <Label text="尾行数:" styleClass="label-tab"/>
                         <TextField fx:id="tailField" promptText="尾行数" prefWidth="80" styleClass="text-field"/>
-                        <Button fx:id="searchToggleButton" onMouseClicked="#searchToggleClick" text="暂停" styleClass="action-button"/>
+                        <Button fx:id="searchToggleButton" onMouseClicked="#searchToggleClick" text="暂停"
+                                styleClass="action-button"/>
                         <Button fx:id="timeRangeButton" text="时间范围" styleClass="action-button"/>
                     </HBox>
                 </VBox>
@@ -77,8 +80,22 @@
                           styleClass="log-header"/>
                 <!-- 日志显示区域容器 -->
                 <AnchorPane fx:id="logAreaContainer" VBox.vgrow="ALWAYS">
-                    <CodeArea fx:id="logArea" editable="false" AnchorPane.topAnchor="0.0" AnchorPane.bottomAnchor="0.0"
-                             AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" styleClass="log-area"/>
+                    <!-- 搜索工具栏（默认隐藏） -->
+                    <HBox fx:id="searchBar" spacing="5" visible="false"
+                          style="-fx-background-color: #e8e8e8; -fx-padding: 5;"
+                          AnchorPane.topAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0">
+                        <TextField fx:id="inlineSearchField" promptText="查找..." HBox.hgrow="ALWAYS"/>
+                        <Label fx:id="matchCountLabel" text="0/0" style="-fx-font-weight: bold;"/>
+                        <Button text="上一处" onMouseClicked="#findPrev"/>
+                        <Button text="下一处" onMouseClicked="#findNext"/>
+                        <Button text="关闭" onMouseClicked="#closeSearch"/>
+                    </HBox>
+
+                    <!-- 日志显示区域 -->
+                    <CodeArea fx:id="logArea" editable="false"
+                              AnchorPane.topAnchor="30.0" AnchorPane.bottomAnchor="0.0"
+                              AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0"
+                              styleClass="log-area"/>
                 </AnchorPane>
             </VBox>
         </SplitPane>

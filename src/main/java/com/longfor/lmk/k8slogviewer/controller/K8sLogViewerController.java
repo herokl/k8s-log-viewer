@@ -14,11 +14,8 @@ import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.input.MouseEvent;
-import javafx.scene.layout.AnchorPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.Region;
-import javafx.scene.layout.VBox;
+import javafx.scene.input.*;
+import javafx.scene.layout.*;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import org.fxmisc.flowless.VirtualizedScrollPane;
@@ -30,9 +27,13 @@ import java.io.IOException;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 import java.util.function.IntFunction;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static com.longfor.lmk.k8slogviewer.config.AppConfig.initializeEnvironment;
 import static com.longfor.lmk.k8slogviewer.utils.CommonUtils.showAlert;
@@ -70,6 +71,16 @@ public class K8sLogViewerController {
     @FXML
     private Button searchButton;
 
+    // 内联搜索栏相关
+    @FXML
+    private HBox searchBar;
+    @FXML
+    private TextField inlineSearchField;
+    private int lastSearchIndex = -1;
+    private String lastKeyword = "";
+    private final List<int[]> matchPositions = new ArrayList<>(); // 保存所有匹配起止位置
+    private int currentMatchIndex = 0;         // 当前高亮匹配编号
+
     @FXML
     public void initialize() throws IOException {
         log.info("k8s 日志查看 初始化...");
@@ -88,6 +99,7 @@ public class K8sLogViewerController {
                 }
             }
         });
+
         // 设置 左侧设置图标
         try {
             ImageView icon = new ImageView(new Image(Objects.requireNonNull(getClass().getResourceAsStream("/com/longfor/lmk/k8slogviewer/icons/settings.png"))));
@@ -97,6 +109,7 @@ public class K8sLogViewerController {
         } catch (Exception e) {
             Platform.runLater(() -> showAlert("错误", "无法加载设置图标: " + e.getMessage()));
         }
+
         K8sQuery k8sQuery = AppConfig.getK8sQuery();
         k8sQuery.setContextLines(0);
 
@@ -122,13 +135,15 @@ public class K8sLogViewerController {
         logArea.setWrapText(true); // 可选：自动换行
         // 设置滚动条
         VirtualizedScrollPane<CodeArea> scrollPane = new VirtualizedScrollPane<>(logArea);
-
-        AnchorPane.setTopAnchor(scrollPane, 0.0);
+        AnchorPane.setTopAnchor(scrollPane, 30.0); // 给搜索栏留空间
         AnchorPane.setBottomAnchor(scrollPane, 0.0);
         AnchorPane.setLeftAnchor(scrollPane, 0.0);
         AnchorPane.setRightAnchor(scrollPane, 0.0);
 
         logAreaContainer.getChildren().add(scrollPane);
+
+        // 初始化内联搜索栏
+        initSearchBar();
 
         // 上下文行数监听器 校验
         contextField.textProperty().addListener((obs, oldVal, newVal) -> {
@@ -142,6 +157,7 @@ public class K8sLogViewerController {
                 k8sQuery.setContextLines(num);
             }
         });
+
         // 截取日志多少行监听
         tailField.textProperty().addListener((obs, oldVal, newVal) -> {
             newVal = newVal.isEmpty() ? "0" : newVal;
@@ -160,6 +176,7 @@ public class K8sLogViewerController {
                         () -> tailField.setText(oldVal)));
             }
         });
+
         searchField.textProperty().addListener((obs, oldVal, newVal) -> refreshTree(newVal));
 
         timeRangeButton.setOnAction(e -> showTimeRangeDialog());
@@ -191,12 +208,186 @@ public class K8sLogViewerController {
         refreshTree(null);
     }
 
+    @FXML
+    private Label matchCountLabel;
+
+    /**
+     * 初始化内联搜索栏
+     */
+    private void initSearchBar() {
+        inlineSearchField = new TextField();
+        inlineSearchField.setPromptText("查找...");
+        HBox.setHgrow(inlineSearchField, Priority.ALWAYS);
+
+        Button prevBtn = new Button("上一处");
+        prevBtn.setOnAction(e -> findPrev());
+
+        Button nextBtn = new Button("下一处");
+        nextBtn.setOnAction(e -> findNext());
+
+        Button closeBtn = new Button("关闭");
+        closeBtn.setOnAction(e -> closeSearch());
+
+        searchBar = new HBox(5, inlineSearchField, prevBtn, nextBtn, closeBtn);
+        searchBar.setPadding(new Insets(5));
+        searchBar.setAlignment(Pos.CENTER_LEFT);
+        searchBar.setVisible(false);
+        searchBar.setStyle("-fx-background-color: #e8e8e8;");
+
+        matchCountLabel = new Label("0/0");
+        matchCountLabel.setStyle("-fx-font-weight: bold;");
+
+        searchBar = new HBox(5, inlineSearchField, prevBtn, nextBtn, matchCountLabel, closeBtn);
+        searchBar.setPadding(new Insets(5));
+        searchBar.setAlignment(Pos.CENTER_LEFT);
+        searchBar.setVisible(false);
+        searchBar.setStyle("-fx-background-color: #e8e8e8;");
+
+        AnchorPane.setTopAnchor(searchBar, 0.0);
+        AnchorPane.setLeftAnchor(searchBar, 0.0);
+        AnchorPane.setRightAnchor(searchBar, 0.0);
+
+        logAreaContainer.getChildren().add(searchBar);
+
+        // 绑定快捷键 Ctrl+F 打开，ESC 关闭
+        logArea.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
+            if (new KeyCodeCombination(KeyCode.F, KeyCombination.CONTROL_DOWN).match(event)) {
+                toggleSearchBar(true);
+                event.consume();
+            } else if (event.getCode() == KeyCode.ESCAPE && searchBar.isVisible()) {
+                toggleSearchBar(false);
+                event.consume();
+            }
+        });
+
+        inlineSearchField.setOnAction(e -> findNext());
+    }
+
+    // ----------------- 内联搜索逻辑 -----------------
+    @FXML
+    private void findNext() {
+        String keyword = inlineSearchField.getText();
+        if (keyword == null || keyword.isEmpty()) return;
+
+        computeAllMatches(keyword);
+
+        if (matchPositions.isEmpty()) return;
+
+        currentMatchIndex = (currentMatchIndex + 1) % matchPositions.size();
+        selectCurrentMatch();
+    }
+
+    @FXML
+    private void findPrev() {
+        String keyword = inlineSearchField.getText();
+        if (keyword == null || keyword.isEmpty()) return;
+
+        computeAllMatches(keyword);
+
+        if (matchPositions.isEmpty()) return;
+
+        currentMatchIndex = (currentMatchIndex - 1 + matchPositions.size()) % matchPositions.size();
+        selectCurrentMatch();
+    }
+
+    @FXML
+    private void closeSearch() {
+        toggleSearchBar(false);
+    }
+
+    private void toggleSearchBar(boolean show) {
+        searchBar.setVisible(show);
+        if (show) {
+            inlineSearchField.requestFocus();
+            inlineSearchField.selectAll();
+        } else {
+            logArea.clearStyle(0, logArea.getLength());
+            lastSearchIndex = -1;
+            lastKeyword = "";
+            matchPositions.clear();
+            currentMatchIndex = 0;
+        }
+    }
+
+    // ----------------- 计算所有匹配 -----------------
+    private void computeAllMatches(String keyword) {
+        if (!keyword.equals(lastKeyword)) {
+            lastKeyword = keyword;
+            matchPositions.clear();
+
+            String text = logArea.getText();
+            Matcher matcher = Pattern.compile(Pattern.quote(keyword), Pattern.CASE_INSENSITIVE).matcher(text);
+            while (matcher.find()) matchPositions.add(new int[]{matcher.start(), matcher.end()});
+        }
+        highlightAllMatches(keyword);
+        updateMatchLabel();
+    }
+
+    // ----------------- 高亮匹配 -----------------
+    private void highlightAllMatches(String keyword) {
+        String text = logArea.getText();
+        logArea.setStyleSpans(0, LogStyleUtil.computeHighlighting(false, text, keyword));
+    }
+
+    // ----------------- 选择当前匹配 -----------------
+    private void selectCurrentMatch() {
+        if (matchPositions.isEmpty()) return;
+        int[] pos = matchPositions.get(currentMatchIndex);
+        logArea.selectRange(pos[0], pos[1]);
+        logArea.requestFollowCaret();
+        updateMatchLabel();
+    }
+
+    // ----------------- 更新匹配数量显示 -----------------
+    private void updateMatchLabel() {
+        if (matchPositions.isEmpty()) {
+            matchCountLabel.setText("0/0");
+        } else {
+            matchCountLabel.setText((currentMatchIndex + 1) + "/" + matchPositions.size());
+        }
+    }
+
+    /**
+     * 增量刷新匹配（不会清空原有样式）
+     */
+    private void refreshMatchesIncremental() {
+        String keyword = inlineSearchField.getText();
+        if (keyword == null || keyword.isEmpty()) return;
+
+        // 新增的文本
+        String text = logArea.getText();
+        Matcher matcher = Pattern.compile(Pattern.quote(keyword), Pattern.CASE_INSENSITIVE).matcher(text);
+
+        while (matcher.find()) {
+            int start = matcher.start();
+            int end = matcher.end();
+            // 只添加新的匹配位置
+            if (matchPositions.isEmpty() || start > matchPositions.get(matchPositions.size() - 1)[1]) {
+                matchPositions.add(new int[]{start, end});
+            }
+        }
+
+        // 高亮所有匹配
+        highlightAllMatches(keyword);
+
+        // 保持 currentMatchIndex 不变或者更新
+        if (!matchPositions.isEmpty() && currentMatchIndex >= matchPositions.size()) {
+            currentMatchIndex = matchPositions.size() - 1;
+        }
+        updateMatchLabel();
+    }
+
     private void showLogs() {
         try {
             K8sQuery query = AppConfig.getK8sQuery();
             query.setHeaderCaptured(true);
             query.setCodeAreas(Arrays.asList(logArea, headerArea));
-            KubectlLogFetcherUtil.fetchStreaming("/scripts/search_logs.sh", line -> LogStyleUtil.appendHighlightedLine(headerArea, logArea, line));
+            KubectlLogFetcherUtil.fetchStreaming("/scripts/search_logs.sh",
+                    line -> {
+                        LogStyleUtil.appendHighlightedLine(headerArea, logArea, line);
+                        // 增量刷新匹配
+                        Platform.runLater(this::refreshMatchesIncremental);
+                    });
         } catch (IOException e) {
             log.error("获取日志失败: {}", e.getMessage());
             Platform.runLater(() -> showAlert("错误", "无法获取日志: " + e.getMessage()));
@@ -216,7 +407,6 @@ public class K8sLogViewerController {
     private void setTreeRoot(TreeItem<String> rootItem) {
         Platform.runLater(() -> treeView.setRoot(rootItem));
     }
-
 
     // 处理树视图单击事件
     private void handleTreeViewClick(MouseEvent event) {
@@ -263,7 +453,6 @@ public class K8sLogViewerController {
                 loadingIndicator.setVisible(false);
             });
         }).start();
-
     }
 
     private void showTimeRangeDialog() {
@@ -280,8 +469,8 @@ public class K8sLogViewerController {
 
         Label instruction = new Label("从哪天开始查看日志（直到现在）:");
         instruction.getStyleClass().add("label-tab");
-
-        DatePicker startDate = new DatePicker(LocalDate.now()); // 默认今天
+        // 默认今天
+        DatePicker startDate = new DatePicker(LocalDate.now());
 
         HBox buttonBox = new HBox(10);
         buttonBox.setAlignment(Pos.CENTER_RIGHT);
@@ -311,7 +500,6 @@ public class K8sLogViewerController {
         });
 
         buttonBox.getChildren().addAll(applyButton, cancelButton);
-
         dialogPane.getChildren().addAll(instruction, startDate, buttonBox);
 
         Scene dialogScene = new Scene(dialogPane, Region.USE_COMPUTED_SIZE, Region.USE_COMPUTED_SIZE);
@@ -321,7 +509,6 @@ public class K8sLogViewerController {
         dialog.setResizable(false);
         dialog.showAndWait();
     }
-
 
     @FXML
     public void searchToggleClick(MouseEvent mouseEvent) {
