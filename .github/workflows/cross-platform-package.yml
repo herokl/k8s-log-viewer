@@ -27,24 +27,24 @@ jobs:
       - name: Build with Maven
         run: mvn clean package -DskipTests
 
-      - name: Run jpackage (Windows)
+      - name: Run jpackage (Windows MSI)
         if: runner.os == 'Windows'
         run: |
           jpackage `
-            --type exe `
+            --type msi `
             --name K8sLogViewer `
             --input target `
             --main-jar k8s-log-viewer-1.0.jar `
-            --main-class com.longfor.lmk.k8slogviewer.K8sLogViewer `
+            --main-class org.springframework.boot.loader.JarLauncher `
             --icon src/main/resources/win.ico `
             --dest target/jpackage `
+            --app-version 1.0 `
+            --vendor "LMK" `
             --win-dir-chooser `
             --win-menu `
-            --win-shortcut `
-            --app-version 1.0 `
-            --vendor "LMK"
+            --win-shortcut
 
-      - name: Run jpackage (macOS)
+      - name: Run jpackage (macOS DMG)
         if: runner.os == 'macOS'
         run: |
           jpackage \
@@ -52,7 +52,7 @@ jobs:
             --name K8sLogViewer \
             --input target \
             --main-jar k8s-log-viewer-1.0.jar \
-            --main-class com.longfor.lmk.k8slogviewer.K8sLogViewer \
+            --main-class org.springframework.boot.loader.JarLauncher \
             --icon src/main/resources/mac.icns \
             --dest target/jpackage \
             --mac-package-identifier com.longfor.lmk.k8slogviewer \
