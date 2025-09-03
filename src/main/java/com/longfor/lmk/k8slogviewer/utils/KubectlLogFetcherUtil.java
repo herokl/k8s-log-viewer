@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.concurrent.ExecutorService;
@@ -80,7 +81,7 @@ public class KubectlLogFetcherUtil {
         SingleProcessManager.register(process, executor);
         Platform.runLater(() -> query.getCodeAreas().forEach(LogStyleUtil::clear));
         executor.submit(() -> {
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
                 String line;
                 while ((line = reader.readLine()) != null) {
                     logLineConsumer.accept(line);

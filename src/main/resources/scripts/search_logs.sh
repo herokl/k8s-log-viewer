@@ -1,5 +1,5 @@
 #!/bin/bash
-
+export LANG=en_US.UTF-8
 # 参数 1：命名空间（必填）
 NAMESPACE=$1
 
