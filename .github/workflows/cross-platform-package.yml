@@ -1,4 +1,4 @@
-name: Package JavaFX App for Win & macOS (Separate Archs)
+name: Package JavaFX App for Win & macOS (DMG Only)
 
 on:
   workflow_dispatch:
@@ -28,6 +28,7 @@ jobs:
         run: |
           mkdir -p target/app/libs
           cp target/k8s-log-viewer-1.0.jar target/app/
+          cp target/libs/* target/app/libs/ || true
 
       - name: Run jpackage (Windows)
         run: |
@@ -75,8 +76,9 @@ jobs:
         run: |
           mkdir -p target/app/libs
           cp target/k8s-log-viewer-1.0.jar target/app/
+          cp target/libs/* target/app/libs/ || true
 
-      - name: Run jpackage (macOS arm64 dmg)
+      - name: Run jpackage dmg (arm64)
         run: |
           jpackage \
             --type dmg \
@@ -91,16 +93,11 @@ jobs:
             --app-version 1.0 \
             --vendor "LMK"
 
-      - name: Compress arm64 dmg
-        run: |
-          cd target/jpackage-arm64
-          tar -czf ../K8sLogViewer-mac-arm64.tar.gz *.app
-
-      - name: Upload arm64 artifact
+      - name: Upload arm64 dmg
         uses: actions/upload-artifact@v4
         with:
           name: k8slogviewer-macos-arm64
-          path: target/K8sLogViewer-mac-arm64.tar.gz
+          path: target/jpackage-arm64/*.dmg
 
   # macOS x64 dmg (cross-compilation)
   build-macos-x64:
@@ -125,8 +122,9 @@ jobs:
         run: |
           mkdir -p target/app/libs
           cp target/k8s-log-viewer-1.0.jar target/app/
+          cp target/libs/* target/app/libs/ || true
 
-      - name: Run jpackage (macOS x64 dmg)
+      - name: Run jpackage dmg (x64)
         run: |
           jpackage \
             --type dmg \
@@ -141,13 +139,8 @@ jobs:
             --app-version 1.0 \
             --vendor "LMK"
 
-      - name: Compress x64 dmg
-        run: |
-          cd target/jpackage-x64
-          tar -czf ../K8sLogViewer-mac-x64.tar.gz *.app
-
-      - name: Upload x64 artifact
+      - name: Upload x64 dmg
         uses: actions/upload-artifact@v4
         with:
           name: k8slogviewer-macos-x64
-          path: target/K8sLogViewer-mac-x64.tar.gz
+          path: target/jpackage-x64/*.dmg
