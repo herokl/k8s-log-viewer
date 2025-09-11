@@ -34,7 +34,7 @@ jobs:
           jpackage `
             --type app-image `
             --name K8sLogViewer `
-            --input target `
+            --input target/libs `
             --main-jar k8s-log-viewer-1.0.jar `
             --main-class org.springframework.boot.loader.JarLauncher `
             --icon src/main/resources/win.ico `
@@ -49,7 +49,7 @@ jobs:
           jpackage \
             --type app-image \
             --name K8sLogViewer \
-            --input target \
+            --input target/libs \
             --main-jar k8s-log-viewer-1.0.jar \
             --main-class org.springframework.boot.loader.JarLauncher \
             --icon src/main/resources/mac.icns \
