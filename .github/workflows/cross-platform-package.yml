@@ -1,4 +1,4 @@
-name: Package JavaFX App for Win & macOS
+name: Package JavaFX App for Win & macOS (Separate Archs)
 
 on:
   workflow_dispatch:
@@ -6,14 +6,11 @@ on:
     branches: [ main ]
 
 jobs:
-  build:
-    name: Build and Package on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 60
-    strategy:
-      matrix:
-        os: [windows-latest, macos-latest]
-
+  # Windows 打包
+  build-windows:
+    name: Build Windows app-image
+    runs-on: windows-latest
+    timeout-minutes: 90
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -27,15 +24,12 @@ jobs:
       - name: Build with Maven
         run: mvn clean package -DskipTests
 
-      # 准备干净的 app 目录，放主 jar 和依赖
       - name: Prepare app dir
         run: |
           mkdir -p target/app/libs
           cp target/k8s-log-viewer-1.0.jar target/app/
 
-      # Windows 打 app-image
-      - name: Run jpackage (Windows app-image)
-        if: runner.os == 'Windows'
+      - name: Run jpackage (Windows)
         run: |
           jpackage `
             --type app-image `
@@ -48,41 +42,112 @@ jobs:
             --app-version 1.0 `
             --vendor "LMK"
 
-      # macOS 打 app-image
-      - name: Run jpackage (macOS app-image)
-        if: runner.os == 'macOS'
+      - name: Compress Windows app-image
+        run: |
+          powershell Compress-Archive -Path target/jpackage/K8sLogViewer -DestinationPath target/K8sLogViewer-win.zip
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: k8slogviewer-windows-x64
+          path: target/K8sLogViewer-win.zip
+
+  # macOS arm64 dmg
+  build-macos-arm64:
+    name: Build macOS arm64 dmg
+    runs-on: macos-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17 (arm64)
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          architecture: 'arm64'
+
+      - name: Build with Maven
+        run: mvn clean package -DskipTests
+
+      - name: Prepare app dir
+        run: |
+          mkdir -p target/app/libs
+          cp target/k8s-log-viewer-1.0.jar target/app/
+
+      - name: Run jpackage (macOS arm64 dmg)
         run: |
           jpackage \
-            --type app-image \
+            --type dmg \
             --name K8sLogViewer \
             --input target/app \
             --main-jar k8s-log-viewer-1.0.jar \
             --main-class org.springframework.boot.loader.JarLauncher \
             --icon src/main/resources/mac.icns \
-            --dest target/jpackage \
+            --dest target/jpackage-arm64 \
             --mac-package-identifier com.longfor.lmk.k8slogviewer \
             --mac-package-name "K8s Log Viewer" \
             --app-version 1.0 \
             --vendor "LMK"
 
-      # 压缩 Windows 包
-      - name: Compress app image (Windows)
-        if: runner.os == 'Windows'
+      - name: Compress arm64 dmg
         run: |
-          powershell Compress-Archive -Path target/jpackage/K8sLogViewer -DestinationPath target/K8sLogViewer-win.zip
+          cd target/jpackage-arm64
+          tar -czf ../K8sLogViewer-mac-arm64.tar.gz *.app
 
-      # 压缩 macOS 包
-      - name: Compress app image (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          cd target/jpackage
-          tar -czf ../K8sLogViewer-mac.tar.gz K8sLogViewer.app
-
-      # 上传
-      - name: Upload packaged app
+      - name: Upload arm64 artifact
         uses: actions/upload-artifact@v4
         with:
-          name: k8slogviewer-${{ runner.os }}
-          path: |
-            target/*.zip
-            target/*.tar.gz
+          name: k8slogviewer-macos-arm64
+          path: target/K8sLogViewer-mac-arm64.tar.gz
+
+  # macOS x64 dmg (cross-compilation)
+  build-macos-x64:
+    name: Build macOS x64 dmg
+    runs-on: macos-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17 (x64)
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          architecture: 'x64'
+
+      - name: Build with Maven
+        run: mvn clean package -DskipTests
+
+      - name: Prepare app dir
+        run: |
+          mkdir -p target/app/libs
+          cp target/k8s-log-viewer-1.0.jar target/app/
+
+      - name: Run jpackage (macOS x64 dmg)
+        run: |
+          jpackage \
+            --type dmg \
+            --name K8sLogViewer \
+            --input target/app \
+            --main-jar k8s-log-viewer-1.0.jar \
+            --main-class org.springframework.boot.loader.JarLauncher \
+            --icon src/main/resources/mac.icns \
+            --dest target/jpackage-x64 \
+            --mac-package-identifier com.longfor.lmk.k8slogviewer \
+            --mac-package-name "K8s Log Viewer" \
+            --app-version 1.0 \
+            --vendor "LMK"
+
+      - name: Compress x64 dmg
+        run: |
+          cd target/jpackage-x64
+          tar -czf ../K8sLogViewer-mac-x64.tar.gz *.app
+
+      - name: Upload x64 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: k8slogviewer-macos-x64
+          path: target/K8sLogViewer-mac-x64.tar.gz
