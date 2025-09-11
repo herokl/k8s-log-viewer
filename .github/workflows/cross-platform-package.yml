@@ -32,7 +32,6 @@ jobs:
         run: |
           mkdir -p target/app/libs
           cp target/k8s-log-viewer-1.0.jar target/app/
-          cp target/libs/* target/app/libs/
 
       # Windows 打 app-image
       - name: Run jpackage (Windows app-image)
@@ -66,18 +65,24 @@ jobs:
             --app-version 1.0 \
             --vendor "LMK"
 
-      # 压缩
-      - name: Compress app image
+      # 压缩 Windows 包
+      - name: Compress app image (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          powershell Compress-Archive -Path target/jpackage/K8sLogViewer -DestinationPath target/K8sLogViewer-win.zip
+
+      # 压缩 macOS 包
+      - name: Compress app image (macOS)
+        if: runner.os == 'macOS'
         run: |
           cd target/jpackage
-          if [ "$RUNNER_OS" = "Windows" ]; then
-            powershell Compress-Archive -Path K8sLogViewer -DestinationPath ../K8sLogViewer-win.zip
-          else
-            tar -czf ../K8sLogViewer-mac.tar.gz K8sLogViewer.app
-          fi
+          tar -czf ../K8sLogViewer-mac.tar.gz K8sLogViewer.app
 
+      # 上传
       - name: Upload packaged app
         uses: actions/upload-artifact@v4
         with:
           name: k8slogviewer-${{ runner.os }}
-          path: target/*.zip
+          path: |
+            target/*.zip
+            target/*.tar.gz
