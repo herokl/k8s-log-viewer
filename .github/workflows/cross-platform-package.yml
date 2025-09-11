@@ -27,6 +27,13 @@ jobs:
       - name: Build with Maven
         run: mvn clean package -DskipTests
 
+      # 准备干净的 app 目录，放主 jar 和依赖
+      - name: Prepare app dir
+        run: |
+          mkdir -p target/app/libs
+          cp target/k8s-log-viewer-1.0.jar target/app/
+          cp target/libs/* target/app/libs/
+
       # Windows 打 app-image
       - name: Run jpackage (Windows app-image)
         if: runner.os == 'Windows'
@@ -34,7 +41,7 @@ jobs:
           jpackage `
             --type app-image `
             --name K8sLogViewer `
-            --input target/libs `
+            --input target/app `
             --main-jar k8s-log-viewer-1.0.jar `
             --main-class org.springframework.boot.loader.JarLauncher `
             --icon src/main/resources/win.ico `
@@ -49,7 +56,7 @@ jobs:
           jpackage \
             --type app-image \
             --name K8sLogViewer \
-            --input target/libs \
+            --input target/app \
             --main-jar k8s-log-viewer-1.0.jar \
             --main-class org.springframework.boot.loader.JarLauncher \
             --icon src/main/resources/mac.icns \
