@@ -9,7 +9,7 @@ jobs:
   build:
     name: Build and Package on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 120
+    timeout-minutes: 60
     strategy:
       matrix:
         os: [windows-latest, macos-latest]
@@ -27,11 +27,12 @@ jobs:
       - name: Build with Maven
         run: mvn clean package -DskipTests
 
-      - name: Run jpackage (Windows MSI)
+      # Windows 打 app-image
+      - name: Run jpackage (Windows app-image)
         if: runner.os == 'Windows'
         run: |
           jpackage `
-            --type msi `
+            --type app-image `
             --name K8sLogViewer `
             --input target `
             --main-jar k8s-log-viewer-1.0.jar `
@@ -39,16 +40,14 @@ jobs:
             --icon src/main/resources/win.ico `
             --dest target/jpackage `
             --app-version 1.0 `
-            --vendor "LMK" `
-            --win-dir-chooser `
-            --win-menu `
-            --win-shortcut
+            --vendor "LMK"
 
-      - name: Run jpackage (macOS DMG)
+      # macOS 打 app-image
+      - name: Run jpackage (macOS app-image)
         if: runner.os == 'macOS'
         run: |
           jpackage \
-            --type dmg \
+            --type app-image \
             --name K8sLogViewer \
             --input target \
             --main-jar k8s-log-viewer-1.0.jar \
@@ -60,8 +59,18 @@ jobs:
             --app-version 1.0 \
             --vendor "LMK"
 
+      # 压缩
+      - name: Compress app image
+        run: |
+          cd target/jpackage
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            powershell Compress-Archive -Path K8sLogViewer -DestinationPath ../K8sLogViewer-win.zip
+          else
+            tar -czf ../K8sLogViewer-mac.tar.gz K8sLogViewer.app
+          fi
+
       - name: Upload packaged app
         uses: actions/upload-artifact@v4
         with:
           name: k8slogviewer-${{ runner.os }}
-          path: target/jpackage
+          path: target/*.zip
