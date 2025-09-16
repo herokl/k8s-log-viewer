@@ -7,7 +7,7 @@
 }
 
 /* 左侧菜单栏 */
-.left-menu {
+.right-menu {
     -fx-background-color: #ECEFF1; /* 浅灰色侧边栏 */
     -fx-border-color: #CFD8DC; /* 柔和边框 */
     -fx-border-width: 0 1 0 0;

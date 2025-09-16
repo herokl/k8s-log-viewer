@@ -5,6 +5,8 @@ import com.longfor.lmk.k8slogviewer.config.K8sQuery;
 import com.longfor.lmk.k8slogviewer.utils.CommonUtils;
 import com.longfor.lmk.k8slogviewer.utils.KubectlLogFetcherUtil;
 import com.longfor.lmk.k8slogviewer.utils.LogStyleUtil;
+import io.kubernetes.client.openapi.ApiException;
+import io.kubernetes.client.openapi.apis.CoreV1Api;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
@@ -12,10 +14,14 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.*;
 import javafx.scene.layout.*;
+import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import org.fxmisc.flowless.VirtualizedScrollPane;
@@ -24,11 +30,17 @@ import org.fxmisc.richtext.model.StyleSpans;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.awt.*;
+import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -633,7 +645,6 @@ public class K8sLogViewerController {
     private SplitPane splitPane;
 
     private boolean isTreePaneVisible = true;  // 当前状态
-    private double lastDividerPosition = 0.3;  // 折叠前宽度比例
 
     @FXML
     private void toggleTreePane() {
@@ -648,10 +659,92 @@ public class K8sLogViewerController {
             // 显示 treePane
             treePane.setVisible(true);
             treePane.setManaged(true);
-            splitPane.setDividerPositions(lastDividerPosition);
+            // 折叠前宽度比例
+            splitPane.setDividerPositions(0.3);
             collapseArrow.setText("⯈");           // 箭头指向左
             isTreePaneVisible = true;
         }
     }
+    @FXML
+    public Button downLogFile;
+    @FXML
+    public void downLogFile(MouseEvent mouseEvent) {
+        K8sQuery k8sQuery = AppConfig.getK8sQuery();
+        String namespace = k8sQuery.getNamespace();
+        String podName = k8sQuery.getPodName();
 
+        if (namespace == null || podName == null) {
+            Platform.runLater(() -> showAlert("错误", "请先选择一个 Pod"));
+            return;
+        }
+        // 使用 FileChooser 让用户选择保存位置
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("保存日志文件");
+        String timestamp = LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+        fileChooser.setInitialFileName(String.format("logs_%s_%s_%s.txt", namespace, podName, timestamp));
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("文本文件", "*.txt"));
+
+        File file = fileChooser.showSaveDialog(downLogFile.getScene().getWindow());
+        if (file == null) {
+            // 用户取消选择
+            return;
+        }
+        String filePath = file.getAbsolutePath();
+
+        downLogFile.setDisable(true);
+        loadingIndicator.setVisible(true);
+
+        new Thread(() -> {
+            try {
+                // 初始化 Kubernetes 客户端
+                CoreV1Api api = AppConfig.getCoreV1Api();
+
+                // 获取日志
+                String logs = api.readNamespacedPodLog(
+                        podName,
+                        namespace,
+                        null, // container
+                        null,
+                        null, // insecureSkipTlsVerifyBackend
+                        null, // limitBytes
+                        null, // pretty
+                        null, // previous
+                        null,
+                        null,
+                        null  // timestamps
+                );
+
+                // 确保 Downloads 目录存在
+                Files.createDirectories(file.toPath().getParent());
+
+                // 保存日志到文件
+                Files.writeString(
+                        Paths.get(filePath),
+                        logs,
+                        StandardCharsets.UTF_8
+                );
+                log.info("日志已保存到: {}", filePath);
+
+                // 打开文件
+                Desktop desktop = Desktop.getDesktop();
+                if (desktop.isSupported(Desktop.Action.OPEN)) {
+                    desktop.open(new File(filePath));
+                    Platform.runLater(() -> showAlert("成功", "日志文件已保存并打开: " + filePath));
+                } else {
+                    Platform.runLater(() -> showAlert("警告", "日志文件已保存到 " + filePath + "，但系统不支持自动打开"));
+                }
+            } catch (ApiException e) {
+                log.error("获取 Kubernetes 日志失败: {}", e.getResponseBody(), e);
+                Platform.runLater(() -> showAlert("错误", "无法获取日志: " + e.getMessage()));
+            } catch (IOException e) {
+                log.error("保存或打开日志文件失败: {}", e.getMessage());
+                Platform.runLater(() -> showAlert("错误", "无法保存或打开日志文件: " + e.getMessage()));
+            } finally {
+                Platform.runLater(() -> {
+                    downLogFile.setDisable(false);
+                    loadingIndicator.setVisible(false);
+                });
+            }
+        }).start();
+    }
 }

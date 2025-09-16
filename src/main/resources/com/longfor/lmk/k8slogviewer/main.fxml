@@ -8,19 +8,6 @@
             fx:controller="com.longfor.lmk.k8slogviewer.controller.K8sLogViewerController"
             stylesheets="@/styles.css"
             styleClass="root">
-
-    <!-- 左侧菜单 -->
-    <left>
-        <VBox styleClass="left-menu" alignment="BOTTOM_LEFT" spacing="10" VBox.vgrow="ALWAYS"
-              style="-fx-background-color: #f4f6f8; -fx-min-width: 20;">
-            <padding>
-                <Insets top="10" right="10" bottom="10" left="10"/>
-            </padding>
-            <Button fx:id="settingsButton" onMouseClicked="#handleOpenSettings"
-                    style="-fx-background-color: transparent; -fx-cursor: hand;"/>
-        </VBox>
-    </left>
-
     <!-- 中间和右侧使用 SplitPane -->
     <center>
         <SplitPane fx:id="splitPane" dividerPositions="0.3" SplitPane.resizableWithParent="true">
@@ -78,6 +65,7 @@
                         <Button fx:id="searchToggleButton" onMouseClicked="#searchToggleClick" text="暂停"
                                 styleClass="action-button"/>
                         <Button fx:id="timeRangeButton" text="时间范围" styleClass="action-button"/>
+                        <Button fx:id="downLogFile" text="下载日志" styleClass="action-button" onMouseClicked="#downLogFile"/>
                     </HBox>
                 </VBox>
                 <!-- 置顶日志区域 -->
@@ -105,4 +93,17 @@
             </VBox>
         </SplitPane>
     </center>
+
+    <!-- 右侧菜单 -->
+    <right>
+        <VBox styleClass="right-menu" alignment="TOP_CENTER" spacing="10" VBox.vgrow="ALWAYS"
+              style="-fx-background-color: #f4f6f8; -fx-min-width: 20;">
+            <padding>
+                <Insets top="10" right="10" bottom="10" left="10"/>
+            </padding>
+            <Button fx:id="settingsButton" onMouseClicked="#handleOpenSettings"
+                    style="-fx-background-color: transparent; -fx-cursor: hand;"/>
+            <Label text="设置" style="-fx-font-size: 10px; -fx-text-fill: #666; -fx-alignment: CENTER;"/>
+        </VBox>
+    </right>
 </BorderPane>
