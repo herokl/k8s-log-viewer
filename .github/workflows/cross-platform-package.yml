@@ -28,9 +28,9 @@ jobs:
         run: |
           mkdir -p target/app/libs
           cp target/k8s-log-viewer-1.0.jar target/app/
-          cp target/libs/* target/app/libs/ || true
 
-      - name: Run jpackage (Windows)
+      - name: Run jpackage (Windows MSI)
+        if: runner.os == 'Windows'
         run: |
           jpackage `
             --type msi `
@@ -39,15 +39,12 @@ jobs:
             --main-jar k8s-log-viewer-1.0.jar `
             --main-class org.springframework.boot.loader.JarLauncher `
             --icon src/main/resources/win.ico `
-            --dest target/jpackage `
+            --dest target/jpackage-winx64 `
             --app-version 1.0 `
-            --vendor "LMK"
-
-      - name: Upload Windows artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: k8slogviewer-windows-x64
-          path: target/jpackage/K8sLogViewer-1.0.msi
+            --vendor "LMK" `
+            --win-dir-chooser `
+            --win-menu `
+            --win-shortcut
 
   # macOS arm64 dmg
   build-macos-arm64:
@@ -72,7 +69,6 @@ jobs:
         run: |
           mkdir -p target/app/libs
           cp target/k8s-log-viewer-1.0.jar target/app/
-          cp target/libs/* target/app/libs/ || true
 
       - name: Run jpackage dmg (arm64)
         run: |
@@ -88,12 +84,6 @@ jobs:
             --mac-package-name "K8s Log Viewer" \
             --app-version 1.0 \
             --vendor "LMK"
-
-      - name: Upload arm64 dmg
-        uses: actions/upload-artifact@v4
-        with:
-          name: k8slogviewer-macos-arm64
-          path: target/jpackage-arm64/*.dmg
 
   # macOS x64 dmg (cross-compilation)
   build-macos-x64:
@@ -118,7 +108,6 @@ jobs:
         run: |
           mkdir -p target/app/libs
           cp target/k8s-log-viewer-1.0.jar target/app/
-          cp target/libs/* target/app/libs/ || true
 
       - name: Run jpackage dmg (x64)
         run: |
@@ -134,9 +123,3 @@ jobs:
             --mac-package-name "K8s Log Viewer" \
             --app-version 1.0 \
             --vendor "LMK"
-
-      - name: Upload x64 dmg
-        uses: actions/upload-artifact@v4
-        with:
-          name: k8slogviewer-macos-x64
-          path: target/jpackage-x64/*.dmg
