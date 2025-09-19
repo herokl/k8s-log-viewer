@@ -8,7 +8,7 @@ on:
 jobs:
   # Windows 打包
   build-windows:
-    name: Build Windows app-image
+    name: Build Windows MSI
     runs-on: windows-latest
     timeout-minutes: 90
     steps:
@@ -45,6 +45,12 @@ jobs:
             --win-dir-chooser `
             --win-menu `
             --win-shortcut
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: k8slogviewer-windows-x64
+          path: target/jpackage-winx64/*.msi
 
   # macOS arm64 dmg
   build-macos-arm64:
@@ -85,6 +91,12 @@ jobs:
             --app-version 1.0 \
             --vendor "LMK"
 
+      - name: Upload arm64 dmg
+        uses: actions/upload-artifact@v4
+        with:
+          name: k8slogviewer-macos-arm64
+          path: target/jpackage-arm64/*.dmg
+
   # macOS x64 dmg (cross-compilation)
   build-macos-x64:
     name: Build macOS x64 dmg
@@ -123,3 +135,9 @@ jobs:
             --mac-package-name "K8s Log Viewer" \
             --app-version 1.0 \
             --vendor "LMK"
+
+      - name: Upload x64 dmg
+        uses: actions/upload-artifact@v4
+        with:
+          name: k8slogviewer-macos-x64
+          path: target/jpackage-x64/*.dmg
