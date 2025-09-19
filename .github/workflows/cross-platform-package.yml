@@ -33,7 +33,7 @@ jobs:
       - name: Run jpackage (Windows)
         run: |
           jpackage `
-            --type app-image `
+            --type msi `
             --name K8sLogViewer `
             --input target/app `
             --main-jar k8s-log-viewer-1.0.jar `
@@ -43,15 +43,11 @@ jobs:
             --app-version 1.0 `
             --vendor "LMK"
 
-      - name: Compress Windows app-image
-        run: |
-          powershell Compress-Archive -Path target/jpackage/K8sLogViewer -DestinationPath target/K8sLogViewer-win.zip
-
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
         with:
           name: k8slogviewer-windows-x64
-          path: target/K8sLogViewer-win.zip
+          path: target/jpackage/K8sLogViewer-1.0.msi
 
   # macOS arm64 dmg
   build-macos-arm64:
