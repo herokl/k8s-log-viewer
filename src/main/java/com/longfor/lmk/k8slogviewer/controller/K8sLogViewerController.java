@@ -41,6 +41,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.List;
+import java.util.Queue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -448,65 +449,146 @@ public class K8sLogViewerController {
         }
         updateMatchLabel();
     }
+    // ===================== 日志缓冲 & 刷新控制 =====================
+    private final Queue<String> logQueue = new ArrayDeque<>();
+    private final Object logQueueLock = new Object();
+
+    private ScheduledExecutorService logFlushExecutor;
+    private static final int LOG_FLUSH_INTERVAL_MS = 50;
+
 
     private void showLogs() {
         try {
             K8sQuery query = AppConfig.getK8sQuery();
             query.setHeaderCaptured(true);
             query.setCodeAreas(Arrays.asList(logArea, headerArea));
-            KubectlLogFetcherUtil.fetchStreaming("/scripts/search_logs.sh",
-                    line -> {
-                        // OPTIMIZE: 合并到单个runLater，处理追加、高亮、增量匹配
-                        Platform.runLater(() -> {
-                            K8sQuery k8sQuery = AppConfig.getK8sQuery();
-                            boolean searchRunning = k8sQuery.isSearchRunning();
-                            boolean headerCaptured = k8sQuery.isHeaderCaptured();
-                            String lineWithNewline = line + "\n";
-                            String logKeyword = k8sQuery.getKeyword();
-                            String searchKeyword = searchBar.isVisible() ? inlineSearchField.getText() : null;
-                            if (searchKeyword != null && searchKeyword.isBlank()) searchKeyword = null;
 
-                            if (headerCaptured) {
-                                boolean contains = line.trim().contains(SEPARATOR_LINE);
-                                k8sQuery.setHeaderCaptured(!contains);
-                                if (!contains) {
-                                    // header无搜索高亮
-                                    LogStyleUtil.setLogArea(headerArea, true, line, lineWithNewline, logKeyword, null);
-                                }
-                            } else {
-                                LogStyleUtil.setLogArea(logArea, false, line, lineWithNewline, logKeyword, searchKeyword);
-                                // OPTIMIZE: 增量匹配（只新行）
-                                if (searchKeyword != null) {
-                                    int offset = logArea.getLength() - lineWithNewline.length();
-                                    refreshMatchesIncremental(offset, lineWithNewline, searchKeyword);
-                                }
-                            }
-                            if (searchRunning) {
-                                logArea.moveTo(logArea.getLength());
-                                logArea.requestFollowCaret();
-                            }
-                            // OPTIMIZE: 可选 - 添加最大行限制
-                            // private static final int MAX_LINES = 10000;
-                            // String fullText = logArea.getText();
-                            // String[] lines = fullText.split("\n");
-                            // if (lines.length > MAX_LINES) {
-                            //     int removeLines = lines.length - MAX_LINES;
-                            //     int removeLength = 0;
-                            //     for (int i = 0; i < removeLines; i++) {
-                            //         removeLength += lines[i].length() + 1;
-                            //     }
-                            //     logArea.deleteText(0, removeLength);
-                            //     // 调整matchPositions
-                            //     final int finalRemove = removeLength;
-                            //     matchPositions.removeIf(pos -> pos[1] <= finalRemove);
-                            //     matchPositions.forEach(pos -> { pos[0] -= finalRemove; pos[1] -= finalRemove; });
-                            //     updateMatchLabel();
-                            // }
-                        });
-                    });
+            // 先停掉旧的刷新任务
+            stopLogFlushTask();
+
+            // 启动 UI 批量刷新任务
+            startLogFlushTask();
+
+            // 后台线程：只负责收日志
+            KubectlLogFetcherUtil.fetchStreaming(
+                    "/scripts/search_logs.sh",
+                    line -> {
+                        synchronized (logQueueLock) {
+                            logQueue.offer(line);
+                        }
+                    }
+            );
+
         } catch (IOException e) {
             log.error("获取日志失败: {}", e.getMessage());
-            Platform.runLater(() -> showAlert("错误", "无法获取日志: " + e.getMessage()));
+            Platform.runLater(() ->
+                    showAlert("错误", "无法获取日志: " + e.getMessage()));
+        }
+    }
+
+    private void startLogFlushTask() {
+        logFlushExecutor = Executors.newSingleThreadScheduledExecutor();
+        logFlushExecutor.scheduleAtFixedRate(
+                this::flushLogsToUI,
+                0,
+                LOG_FLUSH_INTERVAL_MS,
+                TimeUnit.MILLISECONDS
+        );
+    }
+
+    private void stopLogFlushTask() {
+        if (logFlushExecutor != null && !logFlushExecutor.isShutdown()) {
+            logFlushExecutor.shutdownNow();
+        }
+    }
+
+    private void flushLogsToUI() {
+        List<String> batch = new ArrayList<>();
+
+        synchronized (logQueueLock) {
+            while (!logQueue.isEmpty()) {
+                batch.add(logQueue.poll());
+            }
+        }
+
+        if (batch.isEmpty()) return;
+
+        Platform.runLater(() -> processLogBatch(batch));
+    }
+
+    private void processLogBatch(List<String> lines) {
+        K8sQuery k8sQuery = AppConfig.getK8sQuery();
+
+        boolean searchRunning = k8sQuery.isSearchRunning();
+        boolean headerCaptured = k8sQuery.isHeaderCaptured();
+        String logKeyword = k8sQuery.getKeyword();
+
+        String searchKeyword = searchBar.isVisible()
+                ? inlineSearchField.getText()
+                : null;
+        if (searchKeyword != null && searchKeyword.isBlank()) {
+            searchKeyword = null;
+        }
+
+        for (String line : lines) {
+            String lineWithNewline = line + "\n";
+
+            if (headerCaptured) {
+                handleHeaderLine(k8sQuery, line, lineWithNewline, logKeyword);
+            } else {
+                handleLogLine(line, lineWithNewline, logKeyword, searchKeyword);
+            }
+        }
+
+        if (searchRunning) {
+            logArea.moveTo(logArea.getLength());
+            logArea.requestFollowCaret();
+        }
+    }
+
+    private void handleHeaderLine(K8sQuery k8sQuery,
+                                  String line,
+                                  String lineWithNewline,
+                                  String logKeyword) {
+
+        boolean isSeparator = line.trim().contains(SEPARATOR_LINE);
+        k8sQuery.setHeaderCaptured(!isSeparator);
+
+        if (!isSeparator) {
+            LogStyleUtil.setLogArea(
+                    headerArea,
+                    true,
+                    line,
+                    lineWithNewline,
+                    logKeyword,
+                    null
+            );
+        }
+    }
+
+    private void handleLogLine(String line,
+                               String lineWithNewline,
+                               String logKeyword,
+                               String searchKeyword) {
+
+        int startOffset = logArea.getLength();
+
+        LogStyleUtil.setLogArea(
+                logArea,
+                false,
+                line,
+                lineWithNewline,
+                logKeyword,
+                searchKeyword
+        );
+
+        // 增量匹配（你原来的逻辑，位置更安全）
+        if (searchKeyword != null) {
+            refreshMatchesIncremental(
+                    startOffset,
+                    lineWithNewline,
+                    searchKeyword
+            );
         }
     }
 
