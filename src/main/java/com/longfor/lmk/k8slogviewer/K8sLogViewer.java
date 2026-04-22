@@ -1,6 +1,8 @@
 package com.longfor.lmk.k8slogviewer;
 
 import com.longfor.lmk.k8slogviewer.config.AppConfig;
+import com.longfor.lmk.k8slogviewer.utils.ExecutorManager;
+import com.longfor.lmk.k8slogviewer.utils.LogCleaner;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
@@ -15,11 +17,16 @@ public class K8sLogViewer extends Application {
 
     @Override
     public void start(Stage primaryStage) throws IOException {
+        // 启动时清理过期日志
+        LogCleaner.cleanExpiredLogs();
+
         AppConfig.setMainStage(primaryStage);
-        // ✨ 在这里添加以下代码来处理窗口关闭事件
         primaryStage.setOnCloseRequest(event -> {
-            Platform.exit(); // 优雅地关闭 JavaFX 平台
-            System.exit(0);  // 终止 JVM
+            // 关闭时清理过期日志
+            LogCleaner.cleanExpiredLogs();
+            ExecutorManager.shutdownAll();
+            Platform.exit();
+            System.exit(0);
         });
         // 加载 FXML 文件
         FXMLLoader fxmlLoader = new FXMLLoader(K8sLogViewer.class.getResource("/com/longfor/lmk/k8slogviewer/main.fxml"));

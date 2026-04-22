@@ -1,11 +1,11 @@
 package com.longfor.lmk.k8slogviewer.config;
 
-import org.fxmisc.richtext.CodeArea;
-
-import java.util.List;
-
+/**
+ * K8s 日志查询参数，使用 Builder 模式创建。
+ * 纯数据对象，不包含任何 UI 组件引用。
+ */
 public class K8sQuery {
-    private List<CodeArea> codeAreas;
+
     private String namespace;
     private String podName;
     private String keyword;
@@ -16,7 +16,6 @@ public class K8sQuery {
     private boolean searchRunning;
     private boolean headerCaptured;
 
-    // 私有构造函数，只能由 Builder 调用
     private K8sQuery(Builder builder) {
         this.contextLines = builder.contextLines;
         this.tailLines = builder.tailLines;
@@ -25,20 +24,27 @@ public class K8sQuery {
         this.searchRunning = builder.searchRunning;
     }
 
-    // K8sQuery 类的 getter 和 setter 方法...
-
-    // 静态方法，用于获取 Builder 实例
     public static Builder builder() {
         return new Builder();
     }
 
-    // 内部 Builder 类
+    /**
+     * 重置运行时状态（切换 Pod 时调用）。
+     * headerCaptured 初始化为 true，让脚本开头的信息行先展示在 headerArea，
+     * 直到遇到"分割线"后再切换到 logArea。
+     */
+    public void resetRuntimeState() {
+        this.headerCaptured = true;
+    }
+
+    // ==================== Builder ====================
+
     public static class Builder {
-        private int contextLines = 0; // 默认值
-        private int tailLines = 1000; // 默认值
-        private int sinceSeconds = 0; // 默认值
-        private boolean follow = true; // 默认值
-        private boolean searchRunning = true; // 默认值
+        private int contextLines = 0;
+        private int tailLines = 1000;
+        private long sinceSeconds = 0;
+        private boolean follow = true;
+        private boolean searchRunning = true;
 
         public Builder contextLines(int contextLines) {
             this.contextLines = contextLines;
@@ -50,7 +56,7 @@ public class K8sQuery {
             return this;
         }
 
-        public Builder sinceSeconds(int sinceSeconds) {
+        public Builder sinceSeconds(long sinceSeconds) {
             this.sinceSeconds = sinceSeconds;
             return this;
         }
@@ -70,13 +76,7 @@ public class K8sQuery {
         }
     }
 
-    public List<CodeArea> getCodeAreas() {
-        return codeAreas;
-    }
-
-    public void setCodeAreas(List<CodeArea> codeAreas) {
-        this.codeAreas = codeAreas;
-    }
+    // ==================== Getter / Setter ====================
 
     public String getNamespace() {
         return namespace;
