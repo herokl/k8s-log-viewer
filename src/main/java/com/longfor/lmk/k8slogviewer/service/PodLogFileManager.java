@@ -8,25 +8,127 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.*;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.function.IntConsumer;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class PodLogFileManager {
 
     private static final Logger log = LoggerFactory.getLogger(PodLogFileManager.class);
     private static final String LOG_ROOT = Paths.get("logs") + "/k8s_log_viewer";
 
+    // 单例引用，供 LogCleaner 判断当前正在写入的文件
+    private static volatile PodLogFileManager instance;
+
     private BufferedWriter writer;
     private Path currentLogFile;
     private long lastSizeCheckTime = 0;
     private static final long SIZE_CHECK_INTERVAL_MS = 5000; // 5秒检查一次
+
+    /**
+     * 文件截断回调：当 checkAndCleanSizeLimit 截断文件后通知监听者。
+     * 参数为被截断的行数（从文件开头删除的行数）。
+     */
+    private volatile IntConsumer onFileTruncated;
+
+    /**
+     * 设置文件截断回调。
+     * @param callback 参数为从文件开头删除的行数
+     */
+    public void setOnFileTruncated(IntConsumer callback) {
+        this.onFileTruncated = callback;
+    }
+
+    /**
+     * 关闭时清理所有 Pod 的历史日志文件，每个 Pod 只保留最新的一份。
+     * 同时截断保留文件的内容，仅保留最新的 1000 行。
+     * 清理完成后删除所有空目录。
+     */
+    public void cleanAllButLatest() {
+        close();
+
+        Path podLogRoot = Paths.get(LOG_ROOT);
+        if (!Files.exists(podLogRoot)) return;
+
+        try (Stream<Path> podDirs = Files.list(podLogRoot)) {
+            podDirs.filter(Files::isDirectory).forEach(podDir -> {
+                try (Stream<Path> logFiles = Files.list(podDir)
+                        .filter(p -> p.toString().endsWith(".log"))) {
+
+                    List<Path> files = logFiles.sorted((a, b) ->
+                            Long.compare(b.toFile().lastModified(), a.toFile().lastModified())
+                    ).toList();
+
+                    // 保留最新的文件，删除其余
+                    for (int i = 1; i < files.size(); i++) {
+                        Files.deleteIfExists(files.get(i));
+                        log.info("关闭清理：删除旧日志 {}", files.get(i).getFileName());
+                    }
+
+                    // 截断保留文件，仅保留最新 1000 行
+                    if (!files.isEmpty()) {
+                        Path latestFile = files.get(0);
+                        List<String> allLines = Files.readAllLines(latestFile);
+                        if (allLines.size() > 1000) {
+                            List<String> recentLines = allLines.subList(allLines.size() - 1000, allLines.size());
+                            Files.write(latestFile, recentLines, StandardOpenOption.TRUNCATE_EXISTING);
+                            log.info("关闭清理：截断 {} 保留最新 1000 行", latestFile.getFileName());
+                        }
+                    }
+                } catch (IOException e) {
+                    log.warn("关闭清理 Pod 目录失败: {}", podDir, e);
+                }
+            });
+        } catch (IOException e) {
+            log.warn("关闭清理日志目录失败: {}", podLogRoot, e);
+        }
+
+        // 清理空目录（按深度逆序删除，确保嵌套空目录能删干净）
+        cleanEmptyDirs(podLogRoot);
+    }
+
+    /**
+     * 递归删除指定路径下的所有空目录（深层优先）。
+     */
+    private void cleanEmptyDirs(Path root) {
+        if (!Files.exists(root)) return;
+        try (Stream<Path> walk = Files.walk(root)) {
+            walk.filter(Files::isDirectory)
+                    .filter(dir -> isEmptyDirectory(dir))
+                    .sorted(java.util.Comparator.comparingInt(Path::getNameCount).reversed())
+                    .forEach(dir -> {
+                        try {
+                            Files.deleteIfExists(dir);
+                            log.info("关闭清理：删除空目录 {}", dir);
+                        } catch (IOException e) {
+                            // ignore
+                        }
+                    });
+        } catch (IOException e) {
+            log.warn("清理空目录失败: {}", root, e);
+        }
+    }
+
+    private boolean isEmptyDirectory(Path dir) {
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir)) {
+            return !stream.iterator().hasNext();
+        } catch (IOException e) {
+            return false;
+        }
+    }
+
+    public PodLogFileManager() {
+        instance = this;
+    }
 
     public synchronized void switchPod(String podName) throws IOException {
         close();
@@ -81,6 +183,140 @@ public class PodLogFileManager {
     }
 
     /**
+     * 获取当前正在写入的日志文件路径（静态访问，供 LogCleaner 使用）。
+     */
+    public static Path getCurrentActiveLogFile() {
+        return instance != null ? instance.currentLogFile : null;
+    }
+
+    /**
+     * 获取当前 Pod 最近的日志文件路径（按修改时间排序，取最新的）。
+     */
+    public Path getLatestLogFile(String podName) {
+        Path dir = Paths.get(LOG_ROOT, podName);
+        if (!Files.exists(dir)) return null;
+
+        try (Stream<Path> paths = Files.list(dir)) {
+            return paths
+                    .filter(p -> p.toString().endsWith(".log"))
+                    .max((a, b) -> Long.compare(a.toFile().lastModified(), b.toFile().lastModified()))
+                    .orElse(null);
+        } catch (IOException e) {
+            log.warn("列出日志目录失败: {}", dir, e);
+            return null;
+        }
+    }
+
+    /**
+     * 从磁盘日志文件中读取指定行范围的日志（从后往前加载历史）。
+     *
+     * @param podName   Pod 名称
+     * @param fromEnd   从文件末尾倒数第几行开始读取（0=最后一行）
+     * @param count     读取的行数
+     * @return          日志行列表，按文件中的顺序（从旧到新）
+     */
+    public List<String> readLogLinesFromEnd(String podName, int fromEnd, int count) {
+        Path logFile = getLatestLogFile(podName);
+        if (logFile == null) return Collections.emptyList();
+
+        try (Stream<String> lines = Files.lines(logFile, StandardCharsets.UTF_8)) {
+            List<String> allLines = lines.collect(Collectors.toList());
+            int total = allLines.size();
+            int start = Math.max(0, total - fromEnd - count);
+            int end = total - fromEnd;
+            if (end <= 0 || start >= total) return Collections.emptyList();
+            return new ArrayList<>(allLines.subList(start, end));
+        } catch (IOException e) {
+            log.warn("读取日志文件失败: {}", logFile, e);
+            return Collections.emptyList();
+        }
+    }
+
+    /**
+     * 获取当前 Pod 最新日志文件的总行数。
+     *
+     * @param podName Pod 名称
+     * @return 总行数，文件不存在或读取失败返回 0
+     */
+    public int getLineCount(String podName) {
+        Path logFile = getLatestLogFile(podName);
+        if (logFile == null) return 0;
+
+        try (Stream<String> lines = Files.lines(logFile, StandardCharsets.UTF_8)) {
+            return (int) lines.count();
+        } catch (IOException e) {
+            log.warn("统计日志行数失败: {}", logFile, e);
+            return 0;
+        }
+    }
+
+    /**
+     * 从磁盘日志文件中按行号范围读取日志。
+     *
+     * @param podName   Pod 名称
+     * @param startLine 起始行号（0-based，包含）
+     * @param count     读取行数
+     * @return          日志行列表
+     */
+    public List<String> readLogLines(String podName, int startLine, int count) {
+        Path logFile = getLatestLogFile(podName);
+        if (logFile == null) return Collections.emptyList();
+
+        try (Stream<String> lines = Files.lines(logFile, StandardCharsets.UTF_8)) {
+            List<String> result = lines.skip(startLine).limit(count).collect(Collectors.toList());
+            return result;
+        } catch (IOException e) {
+            log.warn("读取日志文件失败: {}", logFile, e);
+            return Collections.emptyList();
+        }
+    }
+
+    /**
+     * 在磁盘日志文件中搜索关键字，返回所有匹配的行号（0-based）。
+     *
+     * @param podName Pod 名称
+     * @param keyword 搜索关键字
+     * @return 匹配的行号列表，以及文件总行数
+     */
+    public DiskSearchResult searchInLogFile(String podName, String keyword) {
+        Path logFile = getLatestLogFile(podName);
+        if (logFile == null || keyword == null || keyword.isBlank()) {
+            return new DiskSearchResult(Collections.emptyList(), 0);
+        }
+
+        List<Integer> matchedLines = new ArrayList<>();
+        String lowerKw = keyword.toLowerCase();
+        int totalLines = 0;
+
+        try (Stream<String> lines = Files.lines(logFile, StandardCharsets.UTF_8)) {
+            Iterable<String> iterable = lines::iterator;
+            for (String line : iterable) {
+                if (line.toLowerCase().contains(lowerKw)) {
+                    matchedLines.add(totalLines);
+                }
+                totalLines++;
+            }
+        } catch (IOException e) {
+            log.warn("搜索日志文件失败: {}", logFile, e);
+        }
+
+        return new DiskSearchResult(matchedLines, totalLines);
+    }
+
+    /**
+     * 磁盘搜索结果
+     */
+    public static class DiskSearchResult {
+        public final List<Integer> matchedLineNumbers;
+        public final int totalLines;
+
+        public DiskSearchResult(List<Integer> matchedLineNumbers, int totalLines) {
+            this.matchedLineNumbers = matchedLineNumbers;
+            this.totalLines = totalLines;
+        }
+    }
+
+    /**
      * 检查当前日志文件大小是否超限，超限则清除历史日志，保留最新部分
      */
     private void checkAndCleanSizeLimit() {
@@ -117,6 +353,12 @@ public class PodLogFileManager {
                 writer = new BufferedWriter(new FileWriter(currentLogFile.toFile(), true));
                 
                 log.info("已清除历史日志，保留最新 {} 行，当前大小约 {} MB", recentLines.size(), file.length() / 1024 / 1024);
+                
+                // 通知监听者文件已被截断
+                int removedLines = allLines.size() - linesToKeep;
+                if (onFileTruncated != null) {
+                    onFileTruncated.accept(removedLines);
+                }
             }
         } catch (IOException e) {
             log.warn("检查或清除历史日志时出错: {}", e.getMessage());

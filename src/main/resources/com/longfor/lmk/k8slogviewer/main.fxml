@@ -56,7 +56,7 @@
                                 onMouseClicked="#searchButtonClick"/>
                     </HBox>
 
-                    <!-- 第二行：上下文行数、尾行数、暂停/恢复搜索、时间范围 -->
+                    <!-- 第二行：上下文行数、尾行数、暂停/恢复搜索、置顶、置底、打开日志文件 -->
                     <HBox spacing="10" alignment="CENTER_LEFT">
                         <Label text="上下文行数:" styleClass="label-tab"/>
                         <TextField fx:id="contextField" prefWidth="80" styleClass="text-field"/>
@@ -64,8 +64,12 @@
                         <TextField fx:id="tailField" promptText="尾行数" prefWidth="80" styleClass="text-field"/>
                         <Button fx:id="searchToggleButton" onMouseClicked="#searchToggleClick" text="暂停"
                                 styleClass="action-button"/>
-                        <Button fx:id="timeRangeButton" text="时间范围" styleClass="action-button"/>
-                        <Button fx:id="downLogFile" text="下载日志" styleClass="action-button" onMouseClicked="#downLogFile"/>
+                        <Button fx:id="scrollToTopButton" text="置顶" styleClass="action-button"
+                                onMouseClicked="#scrollToTopClick"/>
+                        <Button fx:id="scrollToBottomButton" text="置底" styleClass="action-button"
+                                onMouseClicked="#scrollToBottomClick"/>
+                        <Button fx:id="openLogFileButton" text="打开日志文件" styleClass="action-button"
+                                onMouseClicked="#openLogFileClick"/>
                     </HBox>
                 </VBox>
                 <!-- 置顶日志区域 -->

@@ -1,6 +1,7 @@
 package com.longfor.lmk.k8slogviewer.utils;
 
 import com.longfor.lmk.k8slogviewer.config.AppPreferences;
+import com.longfor.lmk.k8slogviewer.service.PodLogFileManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,8 +15,10 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
+import java.util.Comparator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 /**
  * 日志文件清理工具，在应用启动和关闭时执行。
@@ -78,38 +81,48 @@ public final class LogCleaner {
         Instant cutoffInstant = Instant.now().minus(retentionDays, ChronoUnit.DAYS);
 
         try {
-            Files.walk(podLogRoot)
-                    .filter(Files::isRegularFile)
-                    .filter(p -> p.toString().endsWith(".log"))
-                    .forEach(logFile -> {
-                        try {
-                            File f = logFile.toFile();
-                            Instant lastModified = Instant.ofEpochMilli(f.lastModified());
-                            if (lastModified.isBefore(cutoffInstant)) {
-                                Files.deleteIfExists(logFile);
-                                log.info("删除过期 Pod 日志: {}", logFile.getFileName());
+            // 删除过期日志文件
+            try (Stream<Path> walk = Files.walk(podLogRoot)) {
+                walk.filter(Files::isRegularFile)
+                        .filter(p -> p.toString().endsWith(".log"))
+                        .filter(p -> !isActiveLogFile(p))
+                        .forEach(logFile -> {
+                            try {
+                                File f = logFile.toFile();
+                                Instant lastModified = Instant.ofEpochMilli(f.lastModified());
+                                if (lastModified.isBefore(cutoffInstant)) {
+                                    Files.deleteIfExists(logFile);
+                                    log.info("删除过期 Pod 日志: {}", logFile.getFileName());
+                                }
+                            } catch (IOException e) {
+                                log.warn("删除日志文件失败: {}", logFile);
                             }
-                        } catch (IOException e) {
-                            log.warn("删除日志文件失败: {}", logFile);
-                        }
-                    });
+                        });
+            }
 
-            // 删除空目录
-            Files.walk(podLogRoot)
-                    .filter(Files::isDirectory)
-                    .filter(LogCleaner::isEmptyDir)
-                    .forEach(dir -> {
-                        try {
-                            Files.deleteIfExists(dir);
-                            log.info("删除空目录: {}", dir.getFileName());
-                        } catch (IOException e) {
-                            // ignore
-                        }
-                    });
+            // 删除空目录：按深度逆序（深层先删），确保嵌套空目录能删干净
+            try (Stream<Path> walk = Files.walk(podLogRoot)) {
+                walk.filter(Files::isDirectory)
+                        .filter(LogCleaner::isEmptyDir)
+                        .sorted(Comparator.comparingInt(Path::getNameCount).reversed())
+                        .forEach(dir -> {
+                            try {
+                                Files.deleteIfExists(dir);
+                                log.info("删除空目录: {}", dir);
+                            } catch (IOException e) {
+                                // ignore
+                            }
+                        });
+            }
 
         } catch (IOException e) {
             log.warn("清理 Pod 日志缓存失败: {}", e.getMessage());
         }
+    }
+
+    private static boolean isActiveLogFile(Path path) {
+        Path activeFile = PodLogFileManager.getCurrentActiveLogFile();
+        return activeFile != null && path.toAbsolutePath().equals(activeFile.toAbsolutePath());
     }
 
     private static boolean isEmptyDir(Path dir) {

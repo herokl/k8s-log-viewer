@@ -16,19 +16,101 @@ public class LogStyleUtil {
     private LogStyleUtil() {
     }
 
-    // OPTIMIZE: 修改为在Controller中调用，非静态追加，合并到单个runLater
-    // 移除appendHighlightedLine的Platform.runLater，移到Controller处理
+    /**
+     * 批量追加多行日志到 CodeArea，仅触发一次 appendText + 一次 setStyleSpans。
+     * 相比逐行 appendText + setStyleSpans（2N 次文档变更），性能提升数量级。
+     *
+     * @param logArea       目标 CodeArea
+     * @param lines         原始行内容（不含换行符）
+     * @param logKeyword    日志过滤关键字
+     * @param searchKeyword 内联搜索关键字
+     */
+    public static void appendBatch(CodeArea logArea, List<String> lines, String logKeyword, String searchKeyword) {
+        if (lines.isEmpty()) return;
 
-    // OPTIMIZE: 修改setLogArea签名，支持searchKeyword
-    public static void setLogArea(CodeArea logArea, boolean header, String line, String lineWithNewline, String logKeyword, String searchKeyword) {
         int start = logArea.getLength();
-        logArea.appendText(lineWithNewline);
-        StyleSpans<Collection<String>> spans = computeHighlighting(header, line, logKeyword, searchKeyword);
+
+        // 一次性拼接全部文本
+        StringBuilder sb = new StringBuilder(lines.size() * 128);
+        for (String line : lines) {
+            sb.append(line).append('\n');
+        }
+        logArea.appendText(sb.toString());
+
+        // 一次性计算全部样式
+        StyleSpans<Collection<String>> spans = computeBatchHighlighting(lines, logKeyword, searchKeyword);
         logArea.setStyleSpans(start, spans);
     }
 
-    // OPTIMIZE: 重构computeHighlighting，支持多个关键字（logKw和searchKw），使用indexOf代替regex，提高效率
-    // 返回StyleSpans，支持叠加样式（e.g., log-highlight 和 search-highlight）
+    /**
+     * 在文档开头批量插入历史日志行，仅触发一次 insertText + 一次 setStyleSpans。
+     *
+     * @param logArea       目标 CodeArea
+     * @param lines         原始行内容（不含换行符），按时间从旧到新排列
+     * @param logKeyword    日志过滤关键字
+     * @param searchKeyword 内联搜索关键字
+     */
+    public static void prependBatch(CodeArea logArea, List<String> lines, String logKeyword, String searchKeyword) {
+        if (lines.isEmpty()) return;
+
+        // 一次性拼接全部文本
+        StringBuilder sb = new StringBuilder(lines.size() * 128);
+        for (String line : lines) {
+            sb.append(line).append('\n');
+        }
+        logArea.insertText(0, sb.toString());
+
+        // insertText 后原有样式偏移已自动调整，只需为新插入部分设置样式
+        StyleSpans<Collection<String>> spans = computeBatchHighlighting(lines, logKeyword, searchKeyword);
+        logArea.setStyleSpans(0, spans);
+    }
+
+    /**
+     * 追加单行到 headerArea（仅用于 header，量少，无需批量优化）。
+     */
+    public static void appendHeaderLine(CodeArea headerArea, String line, String logKeyword) {
+        String lineWithNewline = line + "\n";
+        int start = headerArea.getLength();
+        headerArea.appendText(lineWithNewline);
+        StyleSpans<Collection<String>> spans = computeHighlighting(true, line, logKeyword, null);
+        headerArea.setStyleSpans(start, spans);
+    }
+
+    /**
+     * 批量计算多行的高亮样式，合并为单个 StyleSpans。
+     */
+    public static StyleSpans<Collection<String>> computeBatchHighlighting(
+            List<String> lines, String logKeyword, String searchKeyword) {
+        boolean hasLogKw = logKeyword != null && !logKeyword.isBlank();
+        boolean hasSearchKw = searchKeyword != null && !searchKeyword.isBlank();
+
+        // 无关键字时，整块用 plain-text
+        if (!hasLogKw && !hasSearchKw) {
+            StyleSpansBuilder<Collection<String>> builder = new StyleSpansBuilder<>();
+            int totalLen = 0;
+            for (String line : lines) {
+                totalLen += line.length() + 1; // +1 for \n
+            }
+            builder.add(Collections.singleton(PLAIN_TEXT), totalLen);
+            return builder.create();
+        }
+
+        // 按段落逐行计算样式再拼接，避免全文 indexOf 在大文本上的开销
+        StyleSpansBuilder<Collection<String>> builder = new StyleSpansBuilder<>();
+        for (String line : lines) {
+            StyleSpans<Collection<String>> lineSpans = computeHighlighting(false, line, logKeyword, searchKeyword);
+            for (var span : lineSpans) {
+                builder.add(span.getStyle(), span.getLength());
+            }
+            // \n 需要一个样式节点
+            builder.add(Collections.singleton(PLAIN_TEXT), 1);
+        }
+        return builder.create();
+    }
+
+    /**
+     * 单行高亮计算。
+     */
     public static StyleSpans<Collection<String>> computeHighlighting(boolean header, String text, String logKeyword, String searchKeyword) {
         String baseStyle = header ? LOG_HEADER : PLAIN_TEXT;
         StyleSpansBuilder<Collection<String>> spansBuilder = new StyleSpansBuilder<>();
@@ -126,7 +208,6 @@ public class LogStyleUtil {
         }
     }
 
-    // 可选：清除样式
     public static void clear(CodeArea codeArea) {
         codeArea.clear();
     }

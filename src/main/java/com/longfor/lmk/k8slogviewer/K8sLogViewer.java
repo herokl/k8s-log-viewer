@@ -1,6 +1,7 @@
 package com.longfor.lmk.k8slogviewer;
 
 import com.longfor.lmk.k8slogviewer.config.AppConfig;
+import com.longfor.lmk.k8slogviewer.service.PodLogFileManager;
 import com.longfor.lmk.k8slogviewer.utils.ExecutorManager;
 import com.longfor.lmk.k8slogviewer.utils.LogCleaner;
 import javafx.application.Application;
@@ -24,6 +25,8 @@ public class K8sLogViewer extends Application {
         primaryStage.setOnCloseRequest(event -> {
             // 关闭时清理过期日志
             LogCleaner.cleanExpiredLogs();
+            // 关闭时清理所有历史日志，仅保留每个 Pod 最新一份
+            new PodLogFileManager().cleanAllButLatest();
             ExecutorManager.shutdownAll();
             Platform.exit();
             System.exit(0);

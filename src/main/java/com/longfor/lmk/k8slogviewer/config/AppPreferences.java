@@ -53,11 +53,11 @@ public final class AppPreferences {
     // ==================== Log Retention Days ====================
 
     public static void setLogRetentionDays(int days) {
-        PREFS.putInt("log_retention_days", Math.max(1, days));
+        PREFS.putInt("log_retention_days", Math.max(0, days));
     }
 
     public static int getLogRetentionDays() {
-        return PREFS.getInt("log_retention_days", 3); // 默认 3 天，与 logback.xml 保持一致
+        return PREFS.getInt("log_retention_days", 0); // 默认 3 天，与 logback.xml 保持一致
     }
 
     // ==================== 环境自动检测 ====================
