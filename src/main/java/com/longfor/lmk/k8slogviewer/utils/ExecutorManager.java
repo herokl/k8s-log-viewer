@@ -138,7 +138,10 @@ public final class ExecutorManager {
 
     // ==================== 私有工厂方法 ====================
 
-    private static ScheduledExecutorService newSingleThreadScheduled(String prefix) {
+    /**
+     * 创建单线程调度线程池（公开，供外部模块创建独立调度器使用）。
+     */
+    public static ScheduledExecutorService newSingleThreadScheduled(String prefix) {
         return Executors.newSingleThreadScheduledExecutor(r -> {
             Thread t = new Thread(r, prefix + POOL_COUNTER.incrementAndGet());
             t.setDaemon(true);

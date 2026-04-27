@@ -21,6 +21,8 @@ import java.util.function.IntConsumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static com.longfor.lmk.k8slogviewer.utils.CommonUtils.parseSearchKeywords;
+
 public class PodLogFileManager {
 
     private static final Logger log = LoggerFactory.getLogger(PodLogFileManager.class);
@@ -215,7 +217,7 @@ public class PodLogFileManager {
      * @param count     读取的行数
      * @return          日志行列表，按文件中的顺序（从旧到新）
      */
-    public List<String> readLogLinesFromEnd(String podName, int fromEnd, int count) {
+    public synchronized List<String> readLogLinesFromEnd(String podName, int fromEnd, int count) {
         Path logFile = getLatestLogFile(podName);
         if (logFile == null) return Collections.emptyList();
 
@@ -238,7 +240,7 @@ public class PodLogFileManager {
      * @param podName Pod 名称
      * @return 总行数，文件不存在或读取失败返回 0
      */
-    public int getLineCount(String podName) {
+    public synchronized int getLineCount(String podName) {
         Path logFile = getLatestLogFile(podName);
         if (logFile == null) return 0;
 
@@ -258,7 +260,7 @@ public class PodLogFileManager {
      * @param count     读取行数
      * @return          日志行列表
      */
-    public List<String> readLogLines(String podName, int startLine, int count) {
+    public synchronized List<String> readLogLines(String podName, int startLine, int count) {
         Path logFile = getLatestLogFile(podName);
         if (logFile == null) return Collections.emptyList();
 
@@ -278,21 +280,49 @@ public class PodLogFileManager {
      * @param keyword 搜索关键字
      * @return 匹配的行号列表，以及文件总行数
      */
-    public DiskSearchResult searchInLogFile(String podName, String keyword) {
+    public synchronized DiskSearchResult searchInLogFile(String podName, String keyword, boolean andMode) {
         Path logFile = getLatestLogFile(podName);
         if (logFile == null || keyword == null || keyword.isBlank()) {
             return new DiskSearchResult(Collections.emptyList(), 0);
         }
 
+        // 支持多关键字搜索：支持引号语法
+        List<String> keywords = parseSearchKeywords(keyword);
+        List<String> lowerKeywords = new ArrayList<>();
+        for (String kw : keywords) {
+            lowerKeywords.add(kw.toLowerCase());
+        }
+        if (lowerKeywords.isEmpty()) {
+            return new DiskSearchResult(Collections.emptyList(), 0);
+        }
+
         List<Integer> matchedLines = new ArrayList<>();
-        String lowerKw = keyword.toLowerCase();
         int totalLines = 0;
 
         try (Stream<String> lines = Files.lines(logFile, StandardCharsets.UTF_8)) {
             Iterable<String> iterable = lines::iterator;
             for (String line : iterable) {
-                if (line.toLowerCase().contains(lowerKw)) {
-                    matchedLines.add(totalLines);
+                String lowerLine = line.toLowerCase();
+                if (andMode && lowerKeywords.size() > 1) {
+                    // 且模式：行中必须包含所有关键字
+                    boolean allMatch = true;
+                    for (String lowerKw : lowerKeywords) {
+                        if (!lowerLine.contains(lowerKw)) {
+                            allMatch = false;
+                            break;
+                        }
+                    }
+                    if (allMatch) {
+                        matchedLines.add(totalLines);
+                    }
+                } else {
+                    // 或模式：行中包含任一关键字即为匹配
+                    for (String lowerKw : lowerKeywords) {
+                        if (lowerLine.contains(lowerKw)) {
+                            matchedLines.add(totalLines);
+                            break;
+                        }
+                    }
                 }
                 totalLines++;
             }

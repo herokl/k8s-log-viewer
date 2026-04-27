@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<VBox xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+      spacing="10" style="-fx-background-color: #F5F6FA;">
+
+    <padding>
+        <Insets top="14" right="14" bottom="14" left="14"/>
+    </padding>
+
+    <!-- Pod 基本信息 - 两行布局，值使用可选中复制的 TextField -->
+    <VBox spacing="6"
+          style="-fx-background-color: #FFFFFF; -fx-background-radius: 8; -fx-padding: 10 16; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.06), 4, 0, 0, 1);">
+        <HBox spacing="8" alignment="CENTER_LEFT">
+            <Label text="Pod:" style="-fx-font-weight: bold; -fx-text-fill: #888; -fx-font-size: 12px;"/>
+            <TextField fx:id="podNameLabel" editable="false" styleClass="copyable-field" HBox.hgrow="ALWAYS"/>
+            <Label text="状态:" style="-fx-font-weight: bold; -fx-text-fill: #888; -fx-font-size: 12px;"/>
+            <TextField fx:id="statusLabel" editable="false" styleClass="copyable-field"/>
+        </HBox>
+        <HBox spacing="8" alignment="CENTER_LEFT">
+            <Label text="节点:" style="-fx-font-weight: bold; -fx-text-fill: #888; -fx-font-size: 12px;"/>
+            <TextField fx:id="nodeLabel" editable="false" styleClass="copyable-field" HBox.hgrow="ALWAYS"/>
+            <Label text="IP:" style="-fx-font-weight: bold; -fx-text-fill: #888; -fx-font-size: 12px;"/>
+            <TextField fx:id="ipLabel" editable="false" styleClass="copyable-field" HBox.hgrow="ALWAYS"/>
+            <Label text="重启:" style="-fx-font-weight: bold; -fx-text-fill: #888; -fx-font-size: 12px;"/>
+            <TextField fx:id="restartLabel" editable="false" styleClass="copyable-field"/>
+        </HBox>
+    </VBox>
+
+    <!-- 容器列表区域 - 包裹在 ScrollPane 中，避免多容器时内容溢出 -->
+    <ScrollPane fitToWidth="true" hbarPolicy="NEVER" VBox.vgrow="ALWAYS"
+                style="-fx-background-color: transparent; -fx-background-insets: 0;">
+        <VBox fx:id="containerList" spacing="12"/>
+    </ScrollPane>
+
+    <!-- 提示信息 -->
+    <Label fx:id="hintLabel" visible="false"
+           style="-fx-text-fill: #999; -fx-font-size: 11px;"/>
+</VBox>

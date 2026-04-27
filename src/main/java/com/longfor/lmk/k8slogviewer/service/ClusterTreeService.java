@@ -86,7 +86,9 @@ public class ClusterTreeService {
             log.info("获取命名空间[{}] Pod 失败: {}", nsName, e.getResponseBody());
         }
         if (!nsItem.getChildren().isEmpty()) {
-            root.getChildren().add(nsItem);
+            synchronized (root) {
+                root.getChildren().add(nsItem);
+            }
         }
     }
 }

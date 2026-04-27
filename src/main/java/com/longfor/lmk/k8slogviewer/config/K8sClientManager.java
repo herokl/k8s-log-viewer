@@ -43,6 +43,17 @@ public final class K8sClientManager {
     }
 
     /**
+     * 获取 ApiClient 实例（供 Metrics API 等需要底层 HTTP 调用的场景使用）。
+     */
+    public static ApiClient getApiClient() {
+        if (apiClient == null) {
+            // 触发初始化
+            getCoreV1Api();
+        }
+        return apiClient;
+    }
+
+    /**
      * 重置客户端（kubeconfig 路径变化时调用）
      */
     public static synchronized void reset() {
@@ -56,6 +67,10 @@ public final class K8sClientManager {
             apiClient = kubeConfigPath != null
                     ? Config.fromConfig(kubeConfigPath)
                     : Config.defaultClient();
+            // 流式日志（follow=true）需要长连接，禁用读取超时
+            apiClient.setReadTimeout(0);
+            apiClient.setConnectTimeout(30000);
+            apiClient.setWriteTimeout(30000);
             Configuration.setDefaultApiClient(apiClient);
             coreV1Api = new CoreV1Api();
         } catch (IOException e) {

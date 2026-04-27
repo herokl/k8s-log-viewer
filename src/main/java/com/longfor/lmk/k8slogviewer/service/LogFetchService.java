@@ -1,128 +1,180 @@
 package com.longfor.lmk.k8slogviewer.service;
 
 import com.longfor.lmk.k8slogviewer.config.AppConfig;
-import com.longfor.lmk.k8slogviewer.config.AppPreferences;
 import com.longfor.lmk.k8slogviewer.config.K8sClientManager;
 import com.longfor.lmk.k8slogviewer.config.K8sQuery;
-import com.longfor.lmk.k8slogviewer.utils.SingleProcessManager;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
+import okhttp3.Call;
+import okhttp3.Response;
+import okhttp3.ResponseBody;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 
 /**
- * 统一日志获取服务，封装两种获取通道：
- * <ul>
- *   <li>kubectl shell 脚本 - 用于流式实时日志获取</li>
- *   <li>K8s Java Client - 用于一次性日志下载</li>
- * </ul>
+ * 日志获取服务，统一通过 K8s Java Client 获取日志。
  */
 public final class LogFetchService {
 
     private static final Logger log = LoggerFactory.getLogger(LogFetchService.class);
-    private static final String STREAMING_SCRIPT = "/scripts/search_logs.sh";
-    private static File cachedScriptFile;
+    private static volatile Call currentCall;
 
     private LogFetchService() {
         throw new IllegalStateException("Utility class");
     }
 
-    // ==================== 流式获取（kubectl 脚本） ====================
+    // ==================== 流式获取（K8s Java SDK） ====================
 
     /**
-     * 通过 kubectl 脚本流式获取日志，每行通过 logLineConsumer 回调。
-     *
-     * @param logLineConsumer 每行日志的消费者
+     * 通过 K8s Java SDK 流式获取日志，每行通过 logLineConsumer 回调。
      */
     public static void fetchStreaming(Consumer<String> logLineConsumer) throws IOException {
         K8sQuery query = AppConfig.getK8sQuery();
-        File scriptFile = extractScript(STREAMING_SCRIPT);
-        String[] cmd = buildScriptArgs(query, scriptFile.getAbsolutePath());
-        log.info("执行命令: {}", String.join(" ", cmd));
 
-        ProcessBuilder pb = new ProcessBuilder(cmd).redirectErrorStream(true);
-        String kubeconfig = AppPreferences.getKubeConfigPath();
-        if (kubeconfig != null) {
-            pb.environment().put("KUBECONFIG", kubeconfig);
+        // 构建等价 kubectl 命令字符串（仅用于日志展示）
+        String cmdStr = buildCommandString(query);
+        log.info("执行命令: {}", cmdStr);
+
+        // 输出头部信息 + 分割线，复用现有 headerArea 机制
+        emitHeaderInfo(query, logLineConsumer);
+
+        CoreV1Api api = K8sClientManager.getCoreV1Api();
+        Integer sinceSeconds = query.getSinceSeconds() > 0 ? (int) query.getSinceSeconds() : null;
+        Integer tailLines = query.getTailLines() > 0 ? query.getTailLines() : null;
+
+        cancelCurrentCall();
+
+        Call call;
+        try {
+            call = api.readNamespacedPodLogCall(
+                    query.getPodName(), query.getNamespace(),
+                    null,                   // container
+                    query.isFollow(),       // follow
+                    null,                   // insecureSkipTLSVerifyBackend
+                    null,                   // limitBytes
+                    null,                   // pretty
+                    null,                   // previous
+                    sinceSeconds,           // sinceSeconds
+                    tailLines,              // tailLines
+                    null,                   // timestamps
+                    null                    // _callback
+            );
+        } catch (ApiException e) {
+            throw new IOException("K8s API 调用失败: " + e.getResponseBody(), e);
         }
+        currentCall = call;
 
-        Process process = pb.start();
-        log.info("启动进程: {}", process.pid());
+        try {
+            Response response = call.execute();
+            ResponseBody body = response.body();
+            if (!response.isSuccessful() || body == null) {
+                String errMsg = body != null ? body.string() : "未知错误";
+                throw new IOException("K8s API 调用失败: " + errMsg);
+            }
 
-        ExecutorService executor = Executors.newSingleThreadExecutor();
-        SingleProcessManager.register(process, executor);
-
-        executor.submit(() -> {
+            // 逐行流式读取
             try (BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
+                    new InputStreamReader(body.byteStream(), StandardCharsets.UTF_8))) {
                 String line;
                 while ((line = reader.readLine()) != null) {
                     logLineConsumer.accept(line);
                 }
-            } catch (IOException e) {
-                log.error("读取日志流失败: {}", e.getMessage(), e);
-            } finally {
-                log.info("日志流结束");
-                executor.shutdown();
             }
-        });
+        } catch (IOException e) {
+            // 用本方法创建的 call 引用判断，而非 currentCall（切换容器时 currentCall 已指向新请求）
+            if (call.isCanceled()) {
+                log.info("日志流被取消，静默退出");
+                return;
+            }
+            throw e;
+        } finally {
+            if (currentCall == call) {
+                currentCall = null;
+            }
+        }
+    }
+
+    /**
+     * 取消当前正在进行的日志流请求。
+     */
+    public static void cancelCurrentCall() {
+        Call call = currentCall;
+        if (call != null && !call.isCanceled()) {
+            call.cancel();
+            log.info("已取消当前日志流请求");
+        }
+        currentCall = null;
     }
 
     // ==================== 一次性获取（K8s Java Client） ====================
 
     /**
-     * 通过 K8s Java Client 获取完整日志文本（用于下载）。
-     *
-     * @return 完整日志文本
+     * 通过 K8s Java Client 获取完整日志文本（用于下载等场景）。
      */
     public static String fetchFullLogs(String namespace, String podName) throws ApiException, IOException {
         CoreV1Api api = K8sClientManager.getCoreV1Api();
         return api.readNamespacedPodLog(
                 podName, namespace,
-                null, null, null, null, null, null, null, null, null
+                null,                   // container
+                false,                  // follow — 一次性获取，不跟随
+                null,                   // insecureSkipTLSVerifyBackend
+                null,                   // limitBytes
+                null,                   // pretty
+                null,                   // previous
+                null,                   // sinceSeconds
+                null,                   // tailLines
+                null                    // timestamps
         );
     }
 
     // ==================== 内部方法 ====================
 
-    private static File extractScript(String resourcePath) throws IOException {
-        if (cachedScriptFile != null && cachedScriptFile.exists()) {
-            return cachedScriptFile;
+    /**
+     * 构建等价的 kubectl 命令字符串（仅用于日志展示，不执行）。
+     */
+    private static String buildCommandString(K8sQuery query) {
+        StringBuilder cmd = new StringBuilder();
+        cmd.append("kubectl logs \"").append(query.getPodName()).append("\"");
+        cmd.append(" -n \"").append(query.getNamespace()).append("\"");
+
+        if (query.getTailLines() > 0) {
+            cmd.append(" --tail=").append(query.getTailLines());
         }
-        InputStream inputStream = LogFetchService.class.getResourceAsStream(resourcePath);
-        if (inputStream == null) {
-            throw new FileNotFoundException("脚本文件未找到: " + resourcePath);
+        if (query.isFollow()) {
+            cmd.append(" -f");
         }
-        File tempFile = File.createTempFile("k8s-log-fetcher", ".sh");
-        tempFile.deleteOnExit();
-        Files.copy(inputStream, tempFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-        if (!tempFile.setExecutable(true)) {
-            log.warn("设置脚本文件权限失败: {}", tempFile.getAbsolutePath());
+        if (query.getSinceSeconds() > 0) {
+            cmd.append(" --since=").append(query.getSinceSeconds()).append("s");
         }
-        cachedScriptFile = tempFile;
-        return tempFile;
+
+        return cmd.toString();
     }
 
-    private static String[] buildScriptArgs(K8sQuery query, String scriptPath) {
-        String bashPath = AppPreferences.getGitBashPath();
-        return new String[]{
-                bashPath,
-                scriptPath,
-                query.getNamespace(),
-                query.getPodName(),
-                query.getKeyword() == null ? "" : query.getKeyword(),
-                String.valueOf(query.getTailLines()),
-                String.valueOf(query.getContextLines()),
-                String.valueOf(query.isFollow()),
-                String.valueOf(query.getSinceSeconds())
-        };
+    /**
+     * 输出头部信息行和分割线，让现有的 headerArea 机制继续生效。
+     */
+    private static void emitHeaderInfo(K8sQuery query, Consumer<String> logLineConsumer) {
+        String cmdStr = buildCommandString(query);
+        logLineConsumer.accept("[Info] 命名空间: " + query.getNamespace());
+        logLineConsumer.accept("[Info] Pod: " + query.getPodName());
+        logLineConsumer.accept("[Info] 命令: " + cmdStr);
+        logLineConsumer.accept("=================================分割线=================================");
+    }
+
+    // JVM 退出时取消当前请求
+    static {
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            Call call = currentCall;
+            if (call != null && !call.isCanceled()) {
+                log.info("JVM 退出，取消日志流请求");
+                call.cancel();
+            }
+        }));
     }
 }

@@ -9,27 +9,23 @@ class K8sQueryTest {
     @Test
     void builder_shouldCreateWithDefaults() {
         K8sQuery query = K8sQuery.builder().build();
-        assertEquals(0, query.getContextLines());
         assertEquals(1000, query.getTailLines());
         assertEquals(0, query.getSinceSeconds());
         assertTrue(query.isFollow());
         assertTrue(query.isSearchRunning());
         assertNull(query.getNamespace());
         assertNull(query.getPodName());
-        assertNull(query.getKeyword());
     }
 
     @Test
     void builder_shouldApplyCustomValues() {
         K8sQuery query = K8sQuery.builder()
-                .contextLines(5)
                 .tailLines(500)
                 .sinceSeconds(3600)
                 .follow(false)
                 .searchRunning(false)
                 .build();
 
-        assertEquals(5, query.getContextLines());
         assertEquals(500, query.getTailLines());
         assertEquals(3600, query.getSinceSeconds());
         assertFalse(query.isFollow());
@@ -41,8 +37,6 @@ class K8sQueryTest {
         K8sQuery query = K8sQuery.builder().build();
         query.setNamespace("default");
         query.setPodName("my-pod");
-        query.setKeyword("error");
-        query.setContextLines(3);
         query.setSinceSeconds(7200);
         query.setFollow(false);
         query.setTailLines(2000);
@@ -50,8 +44,6 @@ class K8sQueryTest {
 
         assertEquals("default", query.getNamespace());
         assertEquals("my-pod", query.getPodName());
-        assertEquals("error", query.getKeyword());
-        assertEquals(3, query.getContextLines());
         assertEquals(7200, query.getSinceSeconds());
         assertFalse(query.isFollow());
         assertEquals(2000, query.getTailLines());

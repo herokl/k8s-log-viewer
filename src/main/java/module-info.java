@@ -14,6 +14,7 @@ module com.longfor.lmk.k8slogviewer {
     requires org.fxmisc.flowless;
     requires reactfx;
     requires java.desktop;
+    requires okhttp3;
 
     opens com.longfor.lmk.k8slogviewer to javafx.fxml;
     exports com.longfor.lmk.k8slogviewer;

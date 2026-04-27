@@ -8,8 +8,6 @@ public class K8sQuery {
 
     private String namespace;
     private String podName;
-    private String keyword;
-    private int contextLines;
     private long sinceSeconds;
     private boolean follow;
     private int tailLines;
@@ -17,7 +15,6 @@ public class K8sQuery {
     private boolean headerCaptured;
 
     private K8sQuery(Builder builder) {
-        this.contextLines = builder.contextLines;
         this.tailLines = builder.tailLines;
         this.sinceSeconds = builder.sinceSeconds;
         this.follow = builder.follow;
@@ -30,7 +27,7 @@ public class K8sQuery {
 
     /**
      * 重置运行时状态（切换 Pod 时调用）。
-     * headerCaptured 初始化为 true，让脚本开头的信息行先展示在 headerArea，
+     * headerCaptured 初始化为 true，让 LogFetchService 输出的头部信息先展示在 headerArea，
      * 直到遇到"分割线"后再切换到 logArea。
      */
     public void resetRuntimeState() {
@@ -40,16 +37,10 @@ public class K8sQuery {
     // ==================== Builder ====================
 
     public static class Builder {
-        private int contextLines = 0;
         private int tailLines = 1000;
         private long sinceSeconds = 0;
         private boolean follow = true;
         private boolean searchRunning = true;
-
-        public Builder contextLines(int contextLines) {
-            this.contextLines = contextLines;
-            return this;
-        }
 
         public Builder tailLines(int tailLines) {
             this.tailLines = tailLines;
@@ -92,22 +83,6 @@ public class K8sQuery {
 
     public void setPodName(String podName) {
         this.podName = podName;
-    }
-
-    public String getKeyword() {
-        return keyword;
-    }
-
-    public void setKeyword(String keyword) {
-        this.keyword = keyword;
-    }
-
-    public int getContextLines() {
-        return contextLines;
-    }
-
-    public void setContextLines(int contextLines) {
-        this.contextLines = contextLines;
     }
 
     public long getSinceSeconds() {

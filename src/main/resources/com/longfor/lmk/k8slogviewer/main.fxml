@@ -12,7 +12,7 @@
     <center>
         <SplitPane fx:id="splitPane" dividerPositions="0.3" SplitPane.resizableWithParent="true">
             <!-- 左侧树视图 + 折叠条 -->
-            <HBox fx:id="treePaneWrapper" spacing="0">
+            <HBox fx:id="treePaneWrapper" spacing="0" alignment="CENTER_RIGHT">
                 <!-- 左侧树视图 -->
                 <VBox fx:id="treePane" spacing="10" styleClass="tree-pane" HBox.hgrow="ALWAYS">
                     <padding>
@@ -22,7 +22,7 @@
                     <HBox spacing="10">
                         <TextField fx:id="searchField" promptText="搜索命名空间/Pod/容器..."
                                    HBox.hgrow="ALWAYS" styleClass="text-field"/>
-                        <Button fx:id="refreshButton" text="刷新" styleClass="action-button"
+                        <Button fx:id="refreshButton" text="刷新" styleClass="toolbar-button"
                                 onMouseClicked="#refreshOnClick"/>
                         <ProgressIndicator fx:id="loadingIndicator" visible="false" maxWidth="20" maxHeight="20"/>
                     </HBox>
@@ -31,9 +31,9 @@
                 </VBox>
 
                 <!-- 折叠条 -->
-                <VBox fx:id="collapseBar" prefWidth="16" style="-fx-background-color: #e0e0e0; -fx-cursor: hand;"
+                <VBox fx:id="collapseBar" styleClass="collapse-bar"
                       alignment="CENTER" onMouseClicked="#toggleTreePane">
-                    <Label fx:id="collapseArrow" text="⯈" style="-fx-font-size: 12; -fx-text-fill: #666666;"/>
+                    <Label fx:id="collapseArrow" text="◂"/>
                 </VBox>
             </HBox>
 
@@ -43,57 +43,47 @@
                     <Insets top="10" right="10" bottom="10" left="10"/>
                 </padding>
 
-                <VBox spacing="5">
-                    <!-- 第一行：搜索框、搜索按钮 -->
-                    <HBox spacing="10" alignment="CENTER_LEFT">
-                        <padding>
-                            <Insets bottom="10"/>
-                        </padding>
-
-                        <TextField fx:id="logSearchField" promptText="搜索日志..."
-                                   HBox.hgrow="ALWAYS" prefWidth="180" styleClass="text-field"/>
-                        <Button fx:id="searchButton" text="搜索" styleClass="action-button"
-                                onMouseClicked="#searchButtonClick"/>
+                <!-- 搜索栏 -->
+                <VBox fx:id="searchBar" styleClass="search-bar">
+                    <HBox spacing="6" alignment="CENTER_LEFT" styleClass="search-input-row">
+                        <TextField fx:id="inlineSearchField" promptText="输入后回车添加标签..."
+                                   prefWidth="250" styleClass="search-input-field"/>
+                        <Button text="+" styleClass="search-add-button" onAction="#onSearchAdd"/>
+                        <ToggleButton fx:id="andOrToggle" text="或" styleClass="toolbar-button"
+                                      onAction="#onAndOrToggle"/>
+                        <Button text="◀" styleClass="search-nav-button" onAction="#findPrev"/>
+                        <Button text="▶" styleClass="search-nav-button" onAction="#findNext"/>
+                        <Label fx:id="matchCountLabel" text="0/0" styleClass="search-match-label"/>
+                        <Button text="✕" styleClass="search-close-button" onAction="#closeSearch"/>
                     </HBox>
+                    <FlowPane fx:id="tagContainer" hgap="6" vgap="4" styleClass="search-tags-row"/>
+                </VBox>
 
-                    <!-- 第二行：上下文行数、尾行数、暂停/恢复搜索、置顶、置底、打开日志文件 -->
-                    <HBox spacing="10" alignment="CENTER_LEFT">
-                        <Label text="上下文行数:" styleClass="label-tab"/>
-                        <TextField fx:id="contextField" prefWidth="80" styleClass="text-field"/>
-                        <Label text="尾行数:" styleClass="label-tab"/>
-                        <TextField fx:id="tailField" promptText="尾行数" prefWidth="80" styleClass="text-field"/>
+                <VBox spacing="5">
+                    <!-- 工具栏 -->
+                    <HBox spacing="8" alignment="CENTER_LEFT">
+                        <Label text="尾行数(回车生效):" styleClass="label-tab"/>
+                        <TextField fx:id="tailField" prefWidth="70" styleClass="text-field"/>
                         <Button fx:id="searchToggleButton" onMouseClicked="#searchToggleClick" text="暂停"
-                                styleClass="action-button"/>
-                        <Button fx:id="scrollToTopButton" text="置顶" styleClass="action-button"
+                                styleClass="toolbar-button"/>
+                        <Button fx:id="scrollToTopButton" text="置顶" styleClass="toolbar-button"
                                 onMouseClicked="#scrollToTopClick"/>
-                        <Button fx:id="scrollToBottomButton" text="置底" styleClass="action-button"
+                        <Button fx:id="scrollToBottomButton" text="置底" styleClass="toolbar-button"
                                 onMouseClicked="#scrollToBottomClick"/>
-                        <Button fx:id="openLogFileButton" text="打开日志文件" styleClass="action-button"
+                        <Button fx:id="openLogFileButton" text="打开日志" styleClass="toolbar-button"
                                 onMouseClicked="#openLogFileClick"/>
+                        <ToggleButton fx:id="wrapButton" styleClass="toolbar-button"
+                                      onAction="#onWrapToggle"/>
                     </HBox>
                 </VBox>
                 <!-- 置顶日志区域 -->
                 <CodeArea fx:id="headerArea" editable="false" maxHeight="50"
                           styleClass="log-header"/>
                 <!-- 日志显示区域容器 -->
-                <AnchorPane fx:id="logAreaContainer" VBox.vgrow="ALWAYS">
-                    <!-- 搜索工具栏（默认隐藏） -->
-                    <HBox fx:id="searchBar" spacing="5" visible="false"
-                          style="-fx-background-color: #e8e8e8; -fx-padding: 5;"
-                          AnchorPane.topAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0">
-                        <TextField fx:id="inlineSearchField" promptText="查找..." HBox.hgrow="ALWAYS"/>
-                        <Label fx:id="matchCountLabel" text="0/0" style="-fx-font-weight: bold;"/>
-                        <Button text="上一处" onMouseClicked="#findPrev"/>
-                        <Button text="下一处" onMouseClicked="#findNext"/>
-                        <Button text="关闭" onMouseClicked="#closeSearch"/>
-                    </HBox>
-
-                    <!-- 日志显示区域 -->
-                    <CodeArea fx:id="logArea" editable="false"
-                              AnchorPane.topAnchor="30.0" AnchorPane.bottomAnchor="0.0"
-                              AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0"
-                              styleClass="log-area"/>
-                </AnchorPane>
+                <VBox fx:id="logAreaContainer" VBox.vgrow="ALWAYS">
+                    <!-- 日志显示区域（运行时被 VirtualizedScrollPane 包装） -->
+                    <CodeArea fx:id="logArea" editable="false" styleClass="log-area"/>
+                </VBox>
             </VBox>
         </SplitPane>
     </center>

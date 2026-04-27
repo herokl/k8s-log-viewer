@@ -5,9 +5,41 @@ import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.TreeItem;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class CommonUtils {
     private CommonUtils() {
         throw new IllegalStateException("Utility class");
+    }
+
+    /**
+     * 解析搜索关键字。
+     * 支持两种分隔符：
+     * <ul>
+     *   <li>{@code \0}（标签式 UI 传入，每个标签作为一个完整关键字）</li>
+     *   <li>空格（兼容直接输入的简单场景）</li>
+     * </ul>
+     *
+     * @param input 搜索字符串
+     * @return 解析后的关键字列表
+     */
+    public static List<String> parseSearchKeywords(String input) {
+        List<String> keywords = new ArrayList<>();
+        if (input == null || input.isBlank()) return keywords;
+
+        // 优先按 \0 分隔（标签式 UI）
+        if (input.indexOf('\0') >= 0) {
+            for (String part : input.split("\0")) {
+                if (!part.isBlank()) keywords.add(part);
+            }
+        } else {
+            // 兼容：按空格分隔
+            for (String part : input.trim().split("\\s+")) {
+                if (!part.isBlank()) keywords.add(part);
+            }
+        }
+        return keywords;
     }
     // 显示警告对话框
     public static void showAlert(String title, String content) {

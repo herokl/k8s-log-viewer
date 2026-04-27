@@ -1,22 +1,22 @@
 /* 根节点和整体背景 */
 .root {
-    -fx-background-color: #F5F5F5; /* 浅灰色，现代明亮 */
-    -fx-font-family: "Segoe UI", Arial, sans-serif; /* 现代无衬线字体 */
+    -fx-background-color: #F5F5F5;
+    -fx-font-family: "Segoe UI", Arial, sans-serif;
     -fx-font-size: 13px;
-    -fx-text-fill: #333333; /* 深灰色文本 */
+    -fx-text-fill: #333333;
 }
 
 /* 左侧菜单栏 */
 .right-menu {
-    -fx-background-color: #ECEFF1; /* 浅灰色侧边栏 */
-    -fx-border-color: #CFD8DC; /* 柔和边框 */
+    -fx-background-color: #ECEFF1;
+    -fx-border-color: #CFD8DC;
     -fx-border-width: 0 1 0 0;
     -fx-padding: 10px;
 }
 
 /* 树视图面板 */
 .tree-pane {
-    -fx-background-color: #FFFFFF; /* 白色背景 */
+    -fx-background-color: #FFFFFF;
     -fx-border-color: #CFD8DC;
     -fx-border-radius: 5px;
     -fx-padding: 10px;
@@ -31,12 +31,22 @@
     -fx-border-radius: 3px;
 }
 
-#collapseBar {
-    -fx-background-color: #e0e0e0;
+/* 折叠条 */
+.collapse-bar {
+    -fx-pref-width: 20;
+    -fx-background-color: #ECEFF1;
+    -fx-cursor: hand;
+    -fx-border-color: #CFD8DC;
+    -fx-border-width: 0 1 0 0;
 }
 
-#collapseBar:hover {
-    -fx-background-color: #cccccc;
+.collapse-bar:hover {
+    -fx-background-color: #CFD8DC;
+}
+
+.collapse-bar .label {
+    -fx-font-size: 14;
+    -fx-text-fill: #78909C;
 }
 
 /* 日志面板 */
@@ -51,20 +61,20 @@
 /* 日志显示区域 */
 .log-area {
     -fx-fill: #E0E0E0;
-    -fx-font-size: 14px;
+    -fx-font-size: 12px;
     -fx-background-color: #1E1E1E;
-    -fx-padding: 10px;
+    -fx-padding: 0 10 10 10;
     -fx-border-color: #326CE5;
     -fx-border-width: 1;
     -fx-border-radius: 5px;
     -fx-control-inner-background: #1E1E1E;
     -fx-font-family: "JetBrains Mono", "Courier New", monospace;
+    -fx-line-spacing: 0px;
 }
-
 
 /* 置顶日志区域 */
 .log-header {
-    -fx-background-color: #F7F7F7; /* 浅灰色 */
+    -fx-background-color: #F7F7F7;
     -fx-text-fill: #444444;
     -fx-padding: 5px;
     -fx-border-color: #CFD8DC;
@@ -75,21 +85,210 @@
 /* 默认文本 */
 .plain-text {
     -fx-fill: #E0E0E0;
-    -fx-font-size: 14px;
+    -fx-font-size: 12px;
 }
 
-/* 关键字高亮 */
-.log-highlight {
-    -fx-fill: #E0E0E0;
-    -rtfx-background-color: #c95050;
-    -fx-font-size: 14px;
+/* 内联搜索高亮 - 关键字1 黄色 */
+.search-highlight-0 {
+    -fx-fill: #1E1E1E;
+    -rtfx-background-color: #FFD54F;
+    -fx-font-size: 12px;
 }
 
-.search-highlight {
-    -fx-fill: #000000;
-    -rtfx-background-color: #FFC107;
-    -fx-font-size: 14px;
+/* 关键字2 青色 */
+.search-highlight-1 {
+    -fx-fill: #1E1E1E;
+    -rtfx-background-color: #80DEEA;
+    -fx-font-size: 12px;
 }
+
+/* 关键字3 紫色 */
+.search-highlight-2 {
+    -fx-fill: #1E1E1E;
+    -rtfx-background-color: #CE93D8;
+    -fx-font-size: 12px;
+}
+
+/* 关键字4 绿色 */
+.search-highlight-3 {
+    -fx-fill: #1E1E1E;
+    -rtfx-background-color: #A5D6A7;
+    -fx-font-size: 12px;
+}
+
+/* 关键字5 橙色 */
+.search-highlight-4 {
+    -fx-fill: #1E1E1E;
+    -rtfx-background-color: #FFAB91;
+    -fx-font-size: 12px;
+}
+
+/* 当前匹配橙色 */
+.search-highlight-current {
+    -fx-fill: #FFFFFF;
+    -rtfx-background-color: #FF6D00;
+    -fx-font-size: 12px;
+}
+
+/* ==================== 工具栏按钮 ==================== */
+.toolbar-button {
+    -fx-background-color: #FFFFFF;
+    -fx-text-fill: #555;
+    -fx-font-size: 13px;
+    -fx-padding: 4 12;
+    -fx-background-radius: 4px;
+    -fx-border-color: #D0D0D0;
+    -fx-border-width: 1;
+    -fx-border-radius: 4px;
+    -fx-cursor: hand;
+    -fx-pref-height: 28;
+}
+
+.toolbar-button:hover {
+    -fx-background-color: #326CE5;
+    -fx-text-fill: #FFF;
+    -fx-border-color: #326CE5;
+}
+
+.toolbar-button:pressed {
+    -fx-background-color: #255AB2;
+    -fx-text-fill: #FFF;
+    -fx-border-color: #255AB2;
+}
+
+/* ==================== 搜索栏 ==================== */
+.search-bar {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #E0E0E0;
+    -fx-border-width: 0 0 1 0;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.06), 4, 0, 0, 2);
+    -fx-padding: 6 10 6 10;
+    -fx-spacing: 4;
+}
+
+.search-input-row {
+    -fx-alignment: CENTER_LEFT;
+    -fx-spacing: 6;
+}
+
+.search-input-field {
+    -fx-font-size: 13px;
+    -fx-background-color: #F5F5F5;
+    -fx-border-color: #D8D8D8;
+    -fx-border-radius: 4px;
+    -fx-background-radius: 4px;
+    -fx-padding: 4 8;
+    -fx-pref-height: 28;
+}
+
+.search-input-field:focused {
+    -fx-border-color: #326CE5;
+    -fx-background-color: #FFFFFF;
+}
+
+/* 搜索 + 按钮 */
+.search-add-button {
+    -fx-background-color: #326CE5;
+    -fx-text-fill: #FFF;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-padding: 2 10;
+    -fx-background-radius: 4px;
+    -fx-cursor: hand;
+    -fx-pref-height: 28;
+}
+
+.search-add-button:hover {
+    -fx-background-color: #255AB2;
+}
+
+/* 搜索导航按钮 */
+.search-nav-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #555;
+    -fx-font-size: 13px;
+    -fx-cursor: hand;
+    -fx-background-radius: 4px;
+    -fx-padding: 2 8;
+    -fx-pref-height: 28;
+}
+
+.search-nav-button:hover {
+    -fx-background-color: #E8E8E8;
+    -fx-text-fill: #333;
+}
+
+/* 匹配计数 */
+.search-match-label {
+    -fx-text-fill: #888;
+    -fx-font-size: 11px;
+    -fx-padding: 0 4;
+    -fx-alignment: CENTER_RIGHT;
+}
+
+/* 搜索关闭按钮 */
+.search-close-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #888;
+    -fx-font-size: 13px;
+    -fx-cursor: hand;
+    -fx-background-radius: 4px;
+    -fx-padding: 2 8;
+    -fx-pref-height: 28;
+}
+
+.search-close-button:hover {
+    -fx-background-color: #FFCDD2;
+    -fx-text-fill: #C62828;
+}
+
+/* 标签行 */
+.search-tags-row {
+    -fx-padding: 4 0 0 0;
+}
+
+/* 搜索标签外框 */
+.search-tag-box {
+    -fx-background-color: #F0F0F0;
+    -fx-background-radius: 10px;
+    -fx-padding: 2 4 2 8;
+    -fx-alignment: CENTER;
+    -fx-cursor: default;
+}
+
+.search-tag-box:hover {
+    -fx-background-color: #E0E0E0;
+}
+
+/* 搜索标签文字 - 小字体，截断 */
+.search-tag {
+    -fx-font-size: 11px;
+    -fx-text-fill: #333;
+    -fx-max-width: 100px;
+    -fx-wrap-text: false;
+}
+
+/* 标签颜色 - 与高亮颜色对应 */
+.search-tag-0 { -fx-text-fill: #8B6914; }
+.search-tag-1 { -fx-text-fill: #00695C; }
+.search-tag-2 { -fx-text-fill: #6A1B9A; }
+.search-tag-3 { -fx-text-fill: #2E7D32; }
+.search-tag-4 { -fx-text-fill: #BF360C; }
+
+/* 标签删除按钮 */
+.search-tag-remove {
+    -fx-background-color: transparent;
+    -fx-font-size: 11px;
+    -fx-padding: 0 2 0 2;
+    -fx-cursor: hand;
+    -fx-text-fill: #999;
+}
+
+.search-tag-remove:hover {
+    -fx-text-fill: #C62828;
+}
+
+/* ==================== 通用组件 ==================== */
 
 /* 行号样式 */
 .line-number {
@@ -98,13 +297,16 @@
     -fx-padding: 0 10 0 6;
     -fx-font-size: 12px;
     -fx-font-family: "JetBrains Mono", "Courier New", monospace;
+    -fx-alignment: center-right;
+    -fx-min-height: -1;
+    -fx-pref-height: -1;
 }
 
 /* 上下文分隔符 */
 .context-delimiter {
-    -fx-fill: #666666; /* 中灰色 */
+    -fx-fill: #666666;
     -fx-font-weight: bold;
-    -fx-font-size: 14px;
+    -fx-font-size: 12px;
 }
 
 /* 输入框 */
@@ -114,61 +316,87 @@
     -fx-prompt-text-fill: #888888;
     -fx-border-color: #CFD8DC;
     -fx-border-radius: 4px;
-    -fx-padding: 6 8px;
+    -fx-padding: 4 8px;
+    -fx-pref-height: 28;
     -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.05), 3, 0, 0, 1);
 }
 
 .text-field:focused {
-    -fx-border-color: #326CE5; /* 聚焦时蓝色边框 */
+    -fx-border-color: #326CE5;
 }
 
-/* 按钮 */
+/* 旧版 action-button 保留兼容 */
 .action-button {
-    -fx-background-color: #326CE5; /* Kubernetes 蓝色 */
-    -fx-text-fill: #FFFFFF;
-    -fx-font-weight: bold;
-    -fx-padding: 8 16;
-    -fx-background-radius: 5px;
-    -fx-border-radius: 5px;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.15), 5, 0, 0, 2);
-    -fx-font-size: 14px;
+    -fx-background-color: #FFFFFF;
+    -fx-text-fill: #555;
+    -fx-font-size: 13px;
+    -fx-padding: 5 12;
+    -fx-background-radius: 4px;
+    -fx-border-color: #D0D0D0;
+    -fx-border-width: 1;
+    -fx-border-radius: 4px;
     -fx-cursor: hand;
 }
 
 .action-button:hover {
-    -fx-background-color: #255AB2; /* 深蓝色悬停 */
+    -fx-background-color: #326CE5;
+    -fx-text-fill: #FFF;
+    -fx-border-color: #326CE5;
 }
 
-/* 按钮图标 */
-/*#refreshButton {
-    -fx-graphic: url("/com/longfor/lmk/k8slogviewer/icons/refresh.png");
-}
-
-#searchButton {
-    -fx-graphic: url("/com/longfor/lmk/k8slogviewer/icons/search.png");
-}*/
-
+/* 设置按钮图标 */
 #settingsButton {
-    /* 强制按钮为固定大小，例如 32x32 像素 */
     -fx-pref-width: 32px;
     -fx-pref-height: 32px;
-
-    /* 使用 -fx-graphic 设置图标，
-       这样 JavaFX 会自动将图标居中并缩放以适应按钮大小。
-    */
     -fx-graphic: url("/com/longfor/lmk/k8slogviewer/icons/settings.png");
-
-    /* 移除按钮的默认背景色，使其透明 */
     -fx-background-color: transparent;
-
-    /* 设置鼠标悬停时的光标样式 */
     -fx-cursor: hand;
 }
 
-/*
-#timeRangeButton {
-    -fx-graphic: url("/com/longfor/lmk/k8slogviewer/icons/time.png");
-}*/
+/* 换行按钮 - 覆盖 ToggleButton 默认样式 */
+#wrapButton {
+    -fx-background-color: #FFFFFF;
+    -fx-text-fill: #555;
+    -fx-padding: 4 12 4 12;
+    -fx-background-radius: 4px;
+    -fx-border-color: #D0D0D0;
+    -fx-border-width: 1;
+    -fx-border-radius: 4px;
+    -fx-cursor: hand;
+    -fx-background-insets: 0;
+    -fx-border-insets: 0;
+    -fx-pref-height: 28;
+}
+
+#wrapButton:hover {
+    -fx-background-color: #F0F0F0;
+    -fx-text-fill: #333;
+    -fx-border-color: #C0C0C0;
+}
+
+#wrapButton:selected {
+    -fx-background-color: #326CE5;
+    -fx-text-fill: #FFF;
+    -fx-border-color: #326CE5;
+    -fx-background-insets: 0;
+    -fx-border-insets: 0;
+}
+
+#wrapButton:selected:hover {
+    -fx-background-color: #255AB2;
+    -fx-border-color: #255AB2;
+    -fx-text-fill: #FFF;
+}
+
+#wrapButton:focused {
+    -fx-border-color: #D0D0D0;
+    -fx-background-insets: 0;
+}
+
+#wrapButton:selected:focused {
+    -fx-border-color: #326CE5;
+    -fx-background-insets: 0;
+}
 
 /* 标签文本 */
 .label-tab {
@@ -178,7 +406,7 @@
 
 /* 进度指示器 */
 .progress-indicator .indicator {
-    -fx-accent: #326CE5; /* 蓝色加载动画 */
+    -fx-accent: #326CE5;
 }
 
 .dialog-pane {

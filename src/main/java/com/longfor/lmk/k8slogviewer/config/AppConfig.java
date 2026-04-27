@@ -15,7 +15,6 @@ import javafx.stage.Stage;
 public class AppConfig {
 
     private static final K8sQuery K8S_QUERY = K8sQuery.builder()
-            .contextLines(0)
             .tailLines(1000)
             .sinceSeconds(0)
             .follow(true)

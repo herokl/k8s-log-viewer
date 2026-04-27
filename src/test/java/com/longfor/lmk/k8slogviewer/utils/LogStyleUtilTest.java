@@ -42,7 +42,7 @@ class LogStyleUtilTest {
     @Test
     void computeHighlighting_emptyKeyword_shouldReturnPlainStyle() {
         StyleSpans<Collection<String>> spans =
-                LogStyleUtil.computeHighlighting(false, "hello world", "", "  ");
+                LogStyleUtil.computeHighlighting(false, "hello world", "", null);
         assertEquals(1, spans.getSpanCount());
         Set<String> styles = extractAllStyles(spans);
         assertTrue(styles.contains(LogStyleUtil.PLAIN_TEXT));
@@ -61,7 +61,7 @@ class LogStyleUtilTest {
     @Test
     void computeHighlighting_searchKeyword_shouldHighlight() {
         StyleSpans<Collection<String>> spans =
-                LogStyleUtil.computeHighlighting(false, "find me here", null, "me");
+                LogStyleUtil.computeHighlighting(false, "me", "find me here", null);
         // "me" at 5-7: 3 spans → [plain][highlight][plain]
         assertEquals(3, spans.getSpanCount());
         Set<String> styles = extractAllStyles(spans);
@@ -72,7 +72,7 @@ class LogStyleUtilTest {
     void computeHighlighting_bothKeywords_shouldHighlightBoth() {
         String text = "error: value not found";
         StyleSpans<Collection<String>> spans =
-                LogStyleUtil.computeHighlighting(false, text, "error", "found");
+                LogStyleUtil.computeHighlighting(false, text, "error", null);
         // "error" at 0-5, "found" at 16-21 → 3 spans
         assertEquals(3, spans.getSpanCount());
         Set<String> styles = extractAllStyles(spans);
@@ -102,7 +102,7 @@ class LogStyleUtilTest {
     void computeHighlighting_overlappingKeywords_shouldMergeStyles() {
         String text = "ERROR";
         StyleSpans<Collection<String>> spans =
-                LogStyleUtil.computeHighlighting(false, text, "ERR", "ERROR");
+                LogStyleUtil.computeHighlighting(false, text, "ERR", null);
         Set<String> styles = extractAllStyles(spans);
         // 完全重叠区域应同时包含两种高亮样式
         assertTrue(styles.contains("log-highlight"), "Should contain log-highlight, got: " + styles);

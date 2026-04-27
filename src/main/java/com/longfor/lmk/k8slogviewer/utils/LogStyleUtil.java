@@ -6,6 +6,8 @@ import org.fxmisc.richtext.model.StyleSpansBuilder;
 
 import java.util.*;
 
+import static com.longfor.lmk.k8slogviewer.utils.CommonUtils.parseSearchKeywords;
+
 public class LogStyleUtil {
 
     public static final String PLAIN_TEXT = "plain-text";
@@ -13,19 +15,24 @@ public class LogStyleUtil {
     public static final String SEPARATOR_LINE = "分割线";
     public static final String LOG_HEADER = "log-header";
 
+    /** 多关键字搜索高亮颜色数量 */
+    public static final int SEARCH_HIGHLIGHT_COLORS = 5;
+
     private LogStyleUtil() {
     }
 
     /**
      * 批量追加多行日志到 CodeArea，仅触发一次 appendText + 一次 setStyleSpans。
-     * 相比逐行 appendText + setStyleSpans（2N 次文档变更），性能提升数量级。
      *
-     * @param logArea       目标 CodeArea
-     * @param lines         原始行内容（不含换行符）
-     * @param logKeyword    日志过滤关键字
-     * @param searchKeyword 内联搜索关键字
+     * @param logArea        目标 CodeArea
+     * @param lines          原始行内容（不含换行符）
+     * @param searchKeyword  内联搜索关键字
      */
-    public static void appendBatch(CodeArea logArea, List<String> lines, String logKeyword, String searchKeyword) {
+    public static void appendBatch(CodeArea logArea, List<String> lines, String searchKeyword) {
+        appendBatch(logArea, lines, searchKeyword, false);
+    }
+
+    public static void appendBatch(CodeArea logArea, List<String> lines, String searchKeyword, boolean andMode) {
         if (lines.isEmpty()) return;
 
         int start = logArea.getLength();
@@ -38,19 +45,22 @@ public class LogStyleUtil {
         logArea.appendText(sb.toString());
 
         // 一次性计算全部样式
-        StyleSpans<Collection<String>> spans = computeBatchHighlighting(lines, logKeyword, searchKeyword);
+        StyleSpans<Collection<String>> spans = computeBatchHighlighting(lines, searchKeyword, andMode);
         logArea.setStyleSpans(start, spans);
     }
 
     /**
      * 在文档开头批量插入历史日志行，仅触发一次 insertText + 一次 setStyleSpans。
      *
-     * @param logArea       目标 CodeArea
-     * @param lines         原始行内容（不含换行符），按时间从旧到新排列
-     * @param logKeyword    日志过滤关键字
-     * @param searchKeyword 内联搜索关键字
+     * @param logArea        目标 CodeArea
+     * @param lines          原始行内容（不含换行符），按时间从旧到新排列
+     * @param searchKeyword  内联搜索关键字
      */
-    public static void prependBatch(CodeArea logArea, List<String> lines, String logKeyword, String searchKeyword) {
+    public static void prependBatch(CodeArea logArea, List<String> lines, String searchKeyword) {
+        prependBatch(logArea, lines, searchKeyword, false);
+    }
+
+    public static void prependBatch(CodeArea logArea, List<String> lines, String searchKeyword, boolean andMode) {
         if (lines.isEmpty()) return;
 
         // 一次性拼接全部文本
@@ -61,18 +71,18 @@ public class LogStyleUtil {
         logArea.insertText(0, sb.toString());
 
         // insertText 后原有样式偏移已自动调整，只需为新插入部分设置样式
-        StyleSpans<Collection<String>> spans = computeBatchHighlighting(lines, logKeyword, searchKeyword);
+        StyleSpans<Collection<String>> spans = computeBatchHighlighting(lines, searchKeyword, andMode);
         logArea.setStyleSpans(0, spans);
     }
 
     /**
      * 追加单行到 headerArea（仅用于 header，量少，无需批量优化）。
      */
-    public static void appendHeaderLine(CodeArea headerArea, String line, String logKeyword) {
+    public static void appendHeaderLine(CodeArea headerArea, String line) {
         String lineWithNewline = line + "\n";
         int start = headerArea.getLength();
         headerArea.appendText(lineWithNewline);
-        StyleSpans<Collection<String>> spans = computeHighlighting(true, line, logKeyword, null);
+        StyleSpans<Collection<String>> spans = computeHighlighting(true, line, null, false);
         headerArea.setStyleSpans(start, spans);
     }
 
@@ -80,16 +90,16 @@ public class LogStyleUtil {
      * 批量计算多行的高亮样式，合并为单个 StyleSpans。
      */
     public static StyleSpans<Collection<String>> computeBatchHighlighting(
-            List<String> lines, String logKeyword, String searchKeyword) {
-        boolean hasLogKw = logKeyword != null && !logKeyword.isBlank();
+            List<String> lines, String searchKeyword, boolean andMode) {
         boolean hasSearchKw = searchKeyword != null && !searchKeyword.isBlank();
 
         // 无关键字时，整块用 plain-text
-        if (!hasLogKw && !hasSearchKw) {
+        if (!hasSearchKw) {
             StyleSpansBuilder<Collection<String>> builder = new StyleSpansBuilder<>();
             int totalLen = 0;
-            for (String line : lines) {
-                totalLen += line.length() + 1; // +1 for \n
+            for (int i = 0; i < lines.size(); i++) {
+                totalLen += lines.get(i).length();
+                if (i < lines.size() - 1) totalLen++; // +1 for \n (最后一行无换行符)
             }
             builder.add(Collections.singleton(PLAIN_TEXT), totalLen);
             return builder.create();
@@ -97,49 +107,60 @@ public class LogStyleUtil {
 
         // 按段落逐行计算样式再拼接，避免全文 indexOf 在大文本上的开销
         StyleSpansBuilder<Collection<String>> builder = new StyleSpansBuilder<>();
-        for (String line : lines) {
-            StyleSpans<Collection<String>> lineSpans = computeHighlighting(false, line, logKeyword, searchKeyword);
+        for (int i = 0; i < lines.size(); i++) {
+            StyleSpans<Collection<String>> lineSpans = computeHighlighting(false, lines.get(i), searchKeyword, andMode);
             for (var span : lineSpans) {
                 builder.add(span.getStyle(), span.getLength());
             }
-            // \n 需要一个样式节点
-            builder.add(Collections.singleton(PLAIN_TEXT), 1);
+            // \n 样式节点（最后一行没有换行符，不需要追加）
+            if (i < lines.size() - 1) {
+                builder.add(Collections.singleton(PLAIN_TEXT), 1);
+            }
         }
         return builder.create();
     }
 
     /**
-     * 单行高亮计算。
+     * 单行高亮计算。支持空格分隔的多关键字搜索，每个关键字使用不同颜色。
+     * @param andMode true=且(所有关键字都在行中才高亮), false=或(任一关键字匹配即高亮)
      */
-    public static StyleSpans<Collection<String>> computeHighlighting(boolean header, String text, String logKeyword, String searchKeyword) {
+    public static StyleSpans<Collection<String>> computeHighlighting(boolean header, String text, String searchKeyword, Boolean andMode) {
         String baseStyle = header ? LOG_HEADER : PLAIN_TEXT;
         StyleSpansBuilder<Collection<String>> spansBuilder = new StyleSpansBuilder<>();
 
         // 如果无关键字，直接返回baseStyle
-        if ((logKeyword == null || logKeyword.isBlank()) && (searchKeyword == null || searchKeyword.isBlank())) {
+        if (searchKeyword == null || searchKeyword.isBlank()) {
             spansBuilder.add(Collections.singleton(baseStyle), text.length());
             return spansBuilder.create();
+        }
+
+        // 多关键字搜索：支持引号语法，每个关键字分配不同颜色
+        List<String> keywords = parseSearchKeywords(searchKeyword);
+
+        // 且模式：检查行中是否包含所有关键字
+        if (andMode && keywords.size() > 1) {
+            String lowerText = text.toLowerCase();
+            for (String kw : keywords) {
+                if (!lowerText.contains(kw.toLowerCase())) {
+                    // 缺少某个关键字，不高亮此行
+                    spansBuilder.add(Collections.singleton(baseStyle), text.length());
+                    return spansBuilder.create();
+                }
+            }
         }
 
         // 收集所有匹配：使用indexOf（忽略大小写），更快
         List<Match> matches = new ArrayList<>();
         String lowerText = text.toLowerCase();
 
-        if (logKeyword != null && !logKeyword.isBlank()) {
-            String lowerLogKw = logKeyword.toLowerCase();
+        for (int i = 0; i < keywords.size(); i++) {
+            String kw = keywords.get(i);
+            String lowerKw = kw.toLowerCase();
+            String styleClass = "search-highlight-" + (i % SEARCH_HIGHLIGHT_COLORS);
             int idx = 0;
-            while ((idx = lowerText.indexOf(lowerLogKw, idx)) != -1) {
-                matches.add(new Match(idx, idx + lowerLogKw.length(), "log-highlight"));
-                idx += lowerLogKw.length();
-            }
-        }
-
-        if (searchKeyword != null && !searchKeyword.isBlank()) {
-            String lowerSearchKw = searchKeyword.toLowerCase();
-            int idx = 0;
-            while ((idx = lowerText.indexOf(lowerSearchKw, idx)) != -1) {
-                matches.add(new Match(idx, idx + lowerSearchKw.length(), "search-highlight"));
-                idx += lowerSearchKw.length();
+            while ((idx = lowerText.indexOf(lowerKw, idx)) != -1) {
+                matches.add(new Match(idx, idx + lowerKw.length(), styleClass));
+                idx += lowerKw.length();
             }
         }
 

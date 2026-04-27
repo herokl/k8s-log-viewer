@@ -3,18 +3,10 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <DialogPane xmlns="http://javafx.com/javafx/8.0.171"
-            xmlns:fx="http://javafx.com/fxml/1"
-            fx:controller="com.longfor.lmk.k8slogviewer.controller.SettingsController">
+            xmlns:fx="http://javafx.com/fxml/1">
 
     <content>
         <VBox spacing="20" style="-fx-background-color: #f9f9f9;">
-            <!-- Git Bash 路径 -->
-            <HBox spacing="15" alignment="CENTER_LEFT">
-                <Label text="Git Bash 路径：" minWidth="100"/>
-                <TextField fx:id="gitBashPathField" HBox.hgrow="ALWAYS" promptText="请选择 Git Bash 路径"/>
-                <Button text="选择" onAction="#onBrowseGitBash" style="-fx-min-width: 70px;"/>
-            </HBox>
-
             <!-- Kubeconfig 路径 -->
             <HBox spacing="15" alignment="CENTER_LEFT">
                 <Label text="Kubeconfig 路径：" minWidth="100"/>
@@ -22,18 +14,32 @@
                 <Button text="选择" onAction="#onBrowseKubeconfig" style="-fx-min-width: 70px;"/>
             </HBox>
 
-            <!-- 最大日志容量 -->
-            <HBox spacing="15" alignment="CENTER_LEFT">
-                <Label text="日志最大容量：" minWidth="100"/>
-                <TextField fx:id="maxLogSizeField" prefWidth="80" promptText="MB"/>
-                <Label text="MB（超过自动清除历史日志）" style="-fx-text-fill: gray;"/>
-            </HBox>
-
             <!-- 日志保留天数 -->
             <HBox spacing="15" alignment="CENTER_LEFT">
                 <Label text="日志保留天数：" minWidth="100"/>
                 <TextField fx:id="logRetentionDaysField" prefWidth="80" promptText="天"/>
                 <Label text="天（超过自动删除过期日志）" style="-fx-text-fill: gray;"/>
+            </HBox>
+
+            <!-- 最大日志容量 -->
+            <HBox spacing="15" alignment="CENTER_LEFT">
+                <Label text="最大日志容量：" minWidth="100"/>
+                <TextField fx:id="maxLogSizeField" prefWidth="80" promptText="MB"/>
+                <Label text="MB（单个日志文件超过自动截断）" style="-fx-text-fill: gray;"/>
+            </HBox>
+
+            <!-- 日志刷新间隔 -->
+            <HBox spacing="15" alignment="CENTER_LEFT">
+                <Label text="刷新间隔：" minWidth="100"/>
+                <TextField fx:id="logFlushIntervalField" prefWidth="80" promptText="ms"/>
+                <Label text="ms（日志刷新到UI的间隔，10~1000，默认50）" style="-fx-text-fill: gray;"/>
+            </HBox>
+
+            <!-- 搜索刷新间隔 -->
+            <HBox spacing="15" alignment="CENTER_LEFT">
+                <Label text="搜索刷新：" minWidth="100"/>
+                <TextField fx:id="searchRefreshIntervalField" prefWidth="80" promptText="ms"/>
+                <Label text="ms（搜索匹配数更新间隔，100~5000，默认1000）" style="-fx-text-fill: gray;"/>
             </HBox>
         </VBox>
     </content>

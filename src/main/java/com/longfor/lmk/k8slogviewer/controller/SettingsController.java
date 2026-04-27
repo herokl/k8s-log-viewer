@@ -20,29 +20,23 @@ public class SettingsController {
     private static final Logger log = LoggerFactory.getLogger(SettingsController.class);
 
     @FXML
-    private TextField gitBashPathField;
-    @FXML
     private TextField kubeConfigPathField;
+    @FXML
+    private TextField logRetentionDaysField;
     @FXML
     private TextField maxLogSizeField;
     @FXML
-    private TextField logRetentionDaysField;
+    private TextField logFlushIntervalField;
+    @FXML
+    private TextField searchRefreshIntervalField;
 
     @FXML
     public void initialize() {
-        gitBashPathField.setText(AppPreferences.getGitBashPath());
         kubeConfigPathField.setText(AppPreferences.getKubeConfigPath());
-        maxLogSizeField.setText(String.valueOf(AppPreferences.getMaxLogSizeMB()));
         logRetentionDaysField.setText(String.valueOf(AppPreferences.getLogRetentionDays()));
-    }
-
-    @FXML
-    public void onBrowseGitBash() {
-        File file = openFileChooser("选择 Git Bash 可执行文件");
-        if (file != null) {
-            gitBashPathField.setText(file.getAbsolutePath());
-            AppPreferences.setGitBashPath(file.getAbsolutePath());
-        }
+        maxLogSizeField.setText(String.valueOf(AppPreferences.getMaxLogSizeMB()));
+        logFlushIntervalField.setText(String.valueOf(AppPreferences.getLogFlushIntervalMs()));
+        searchRefreshIntervalField.setText(String.valueOf(AppPreferences.getSearchRefreshIntervalMs()));
     }
 
     @FXML
@@ -62,12 +56,13 @@ public class SettingsController {
     }
 
     private Window getWindow() {
-        return gitBashPathField.getScene().getWindow();
+        return kubeConfigPathField.getScene().getWindow();
     }
 
     public void openSettingsDialog() throws IOException {
         URL url = getClass().getResource("/com/longfor/lmk/k8slogviewer/settings_dialog.fxml");
         FXMLLoader loader = new FXMLLoader(url);
+        loader.setController(this);
         DialogPane dialogPane = loader.load();
 
         Dialog<ButtonType> dialog = new Dialog<>();
@@ -85,6 +80,17 @@ public class SettingsController {
     }
 
     private void saveSettings() {
+        // 保存日志保留天数
+        String daysText = logRetentionDaysField.getText();
+        if (daysText != null && !daysText.isBlank()) {
+            try {
+                int days = Integer.parseInt(daysText.trim());
+                AppPreferences.setLogRetentionDays(days);
+            } catch (NumberFormatException e) {
+                log.warn("无效的日志保留天数: {}", daysText);
+            }
+        }
+
         // 保存最大日志容量
         String sizeText = maxLogSizeField.getText();
         if (sizeText != null && !sizeText.isBlank()) {
@@ -95,21 +101,29 @@ public class SettingsController {
                 }
                 AppPreferences.setMaxLogSizeMB(maxMB);
             } catch (NumberFormatException e) {
-                log.warn("无效的日志容量值: {}", sizeText);
+                log.warn("无效的最大日志容量: {}", sizeText);
             }
         }
 
-        // 保存日志保留天数
-        String daysText = logRetentionDaysField.getText();
-        if (daysText != null && !daysText.isBlank()) {
+        // 保存日志刷新间隔
+        String intervalText = logFlushIntervalField.getText();
+        if (intervalText != null && !intervalText.isBlank()) {
             try {
-                int days = Integer.parseInt(daysText.trim());
-                if (days < 1) {
-                    days = 1;
-                }
-                AppPreferences.setLogRetentionDays(days);
+                int ms = Integer.parseInt(intervalText.trim());
+                AppPreferences.setLogFlushIntervalMs(ms);
             } catch (NumberFormatException e) {
-                log.warn("无效的日志保留天数: {}", daysText);
+                log.warn("无效的日志刷新间隔: {}", intervalText);
+            }
+        }
+
+        // 保存搜索刷新间隔
+        String searchIntervalText = searchRefreshIntervalField.getText();
+        if (searchIntervalText != null && !searchIntervalText.isBlank()) {
+            try {
+                int ms = Integer.parseInt(searchIntervalText.trim());
+                AppPreferences.setSearchRefreshIntervalMs(ms);
+            } catch (NumberFormatException e) {
+                log.warn("无效的搜索刷新间隔: {}", searchIntervalText);
             }
         }
 
