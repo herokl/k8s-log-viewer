@@ -24,16 +24,19 @@
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-controls</artifactId>
             <version>${javafx.version}</version>
+            <classifier>${javafx.platform}</classifier>
         </dependency>
         <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-fxml</artifactId>
             <version>${javafx.version}</version>
+            <classifier>${javafx.platform}</classifier>
         </dependency>
         <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-charts</artifactId>
             <version>${javafx.version}</version>
+            <classifier>${javafx.platform}</classifier>
         </dependency>
         <dependency>
             <groupId>org.controlsfx</groupId>
@@ -91,6 +94,44 @@
             <version>0.11.2</version>
         </dependency>
     </dependencies>
+
+    <profiles>
+        <profile>
+            <id>windows</id>
+            <activation>
+                <os>
+                    <family>windows</family>
+                </os>
+            </activation>
+            <properties>
+                <javafx.platform>win</javafx.platform>
+            </properties>
+        </profile>
+        <profile>
+            <id>macos</id>
+            <activation>
+                <os>
+                    <family>mac</family>
+                </os>
+            </activation>
+            <properties>
+                <javafx.platform>mac</javafx.platform>
+            </properties>
+        </profile>
+        <profile>
+            <id>linux</id>
+            <activation>
+                <os>
+                    <family>unix</family>
+                    <name>Linux</name>
+                </os>
+            </activation>
+            <properties>
+                <javafx.platform>linux</javafx.platform>
+            </properties>
+        </profile>
+    </profiles>
+
     <build>
         <finalName>k8s-log-viewer-1.0</finalName>
         <plugins>
