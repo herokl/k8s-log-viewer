@@ -31,6 +31,7 @@ public class K8sLogViewer extends Application {
             Platform.exit();
             System.exit(0);
         });
+
         // 加载 FXML 文件
         FXMLLoader fxmlLoader = new FXMLLoader(K8sLogViewer.class.getResource("/com/longfor/lmk/k8slogviewer/main.fxml"));
         Scene scene = new Scene(fxmlLoader.load(), 1200, 800);
@@ -38,6 +39,7 @@ public class K8sLogViewer extends Application {
         primaryStage.getIcons().add(new Image(Objects.requireNonNull(
                 K8sLogViewer.class.getResourceAsStream("/com/longfor/lmk/k8slogviewer/icons/k8s.png"))));
         primaryStage.setScene(scene);
+
         primaryStage.show();
     }
 

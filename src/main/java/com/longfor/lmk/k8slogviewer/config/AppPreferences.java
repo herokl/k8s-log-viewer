@@ -16,6 +16,10 @@ public final class AppPreferences {
     private static final int DEFAULT_LOG_FLUSH_INTERVAL_MS = 50;
     private static final String SEARCH_REFRESH_INTERVAL_KEY = "search_refresh_interval_ms";
     private static final int DEFAULT_SEARCH_REFRESH_INTERVAL_MS = 1000;
+    private static final String TREE_AUTO_REFRESH_KEY = "tree_auto_refresh";
+    private static final boolean DEFAULT_TREE_AUTO_REFRESH = false;
+    private static final String TREE_AUTO_REFRESH_INTERVAL_KEY = "tree_auto_refresh_interval_sec";
+    private static final int DEFAULT_TREE_AUTO_REFRESH_INTERVAL_SEC = 10;
 
     private AppPreferences() {
         throw new IllegalStateException("Utility class");
@@ -69,6 +73,24 @@ public final class AppPreferences {
 
     public static int getSearchRefreshIntervalMs() {
         return PREFS.getInt(SEARCH_REFRESH_INTERVAL_KEY, DEFAULT_SEARCH_REFRESH_INTERVAL_MS);
+    }
+
+    // ==================== Tree Auto Refresh ====================
+
+    public static void setTreeAutoRefresh(boolean enabled) {
+        PREFS.putBoolean(TREE_AUTO_REFRESH_KEY, enabled);
+    }
+
+    public static boolean isTreeAutoRefresh() {
+        return PREFS.getBoolean(TREE_AUTO_REFRESH_KEY, DEFAULT_TREE_AUTO_REFRESH);
+    }
+
+    public static void setTreeAutoRefreshIntervalSec(int sec) {
+        PREFS.putInt(TREE_AUTO_REFRESH_INTERVAL_KEY, Math.max(1, Math.min(300, sec)));
+    }
+
+    public static int getTreeAutoRefreshIntervalSec() {
+        return PREFS.getInt(TREE_AUTO_REFRESH_INTERVAL_KEY, DEFAULT_TREE_AUTO_REFRESH_INTERVAL_SEC);
     }
 
     // ==================== 环境自动检测 ====================

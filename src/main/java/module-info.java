@@ -19,6 +19,7 @@ module com.longfor.lmk.k8slogviewer {
     opens com.longfor.lmk.k8slogviewer to javafx.fxml;
     exports com.longfor.lmk.k8slogviewer;
     exports com.longfor.lmk.k8slogviewer.controller to javafx.fxml;
+    exports com.longfor.lmk.k8slogviewer.model;
 
     opens com.longfor.lmk.k8slogviewer.controller to javafx.fxml;
 }

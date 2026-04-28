@@ -1,64 +1,225 @@
-/* 根节点和整体背景 */
+/* ==================== 全局 ==================== */
 .root {
-    -fx-background-color: #F5F5F5;
-    -fx-font-family: "Segoe UI", Arial, sans-serif;
+    -fx-background-color: #FFFFFF;
+    -fx-font-family: "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
     -fx-font-size: 13px;
     -fx-text-fill: #333333;
 }
 
-/* 左侧菜单栏 */
-.right-menu {
-    -fx-background-color: #ECEFF1;
-    -fx-border-color: #CFD8DC;
-    -fx-border-width: 0 1 0 0;
-    -fx-padding: 10px;
-}
-
-/* 树视图面板 */
+/* ==================== 左侧树面板 ==================== */
 .tree-pane {
-    -fx-background-color: #FFFFFF;
-    -fx-border-color: #CFD8DC;
-    -fx-border-radius: 5px;
-    -fx-padding: 10px;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.1), 5, 0, 0, 2);
+    -fx-background-color: #F8F9FA;
+    -fx-border-color: transparent;
+    -fx-border-radius: 0;
+    -fx-padding: 8px;
 }
 
-/* 树视图样式 */
+/* ==================== 树视图 ==================== */
 .tree-view {
     -fx-background-color: #FFFFFF;
     -fx-text-fill: #333333;
-    -fx-border-color: #CFD8DC;
-    -fx-border-radius: 3px;
+    -fx-border-color: transparent;
+    -fx-border-radius: 0;
+    -fx-cell-size: 30px;
+    -fx-padding: 0;
 }
 
-/* 折叠条 */
-.collapse-bar {
-    -fx-pref-width: 20;
-    -fx-background-color: #ECEFF1;
-    -fx-cursor: hand;
-    -fx-border-color: #CFD8DC;
-    -fx-border-width: 0 1 0 0;
+.tree-view .virtual-flow {
+    -fx-background-color: #FFFFFF;
 }
 
-.collapse-bar:hover {
-    -fx-background-color: #CFD8DC;
+.tree-view .tree-cell {
+    -fx-padding: 4 8;
+    -fx-background-radius: 4px;
+    -fx-text-fill: #333333;
+    -fx-font-size: 13px;
+    -fx-indent: 0;
 }
 
-.collapse-bar .label {
-    -fx-font-size: 14;
-    -fx-text-fill: #78909C;
+.tree-view .tree-cell:hover {
+    -fx-background-color: transparent;
 }
 
-/* 日志面板 */
-.log-pane {
+.tree-view .tree-cell:filled:hover {
+    -fx-background-color: #E8F0FE;
+}
+
+.tree-view .tree-cell:selected {
+    -fx-background-color: #326CE5;
+    -fx-text-fill: #FFFFFF;
+}
+
+.tree-view .tree-cell:selected:hover {
+    -fx-background-color: #326CE5;
+}
+
+/* 树展开箭头 - 隐藏默认箭头，由自定义 Cell 绘制 */
+.tree-view .tree-disclosure-node {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+    -fx-min-width: 0;
+    -fx-pref-width: 0;
+    -fx-max-width: 0;
+}
+
+.tree-view .tree-disclosure-node .arrow {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+    -fx-shape: "";
+    -fx-min-width: 0;
+    -fx-pref-width: 0;
+    -fx-max-width: 0;
+}
+
+/* ==================== 搜索框+状态筛选 ==================== */
+.search-field-wrapper {
     -fx-background-color: #FFFFFF;
     -fx-border-color: #CFD8DC;
-    -fx-border-radius: 5px;
-    -fx-padding: 10px;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.1), 5, 0, 0, 2);
+    -fx-border-radius: 6px;
+    -fx-background-radius: 6px;
+    -fx-padding: 1 4 1 1;
+    -fx-pref-height: 30;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.05), 3, 0, 0, 1);
+    -fx-alignment: CENTER_LEFT;
 }
 
-/* 日志显示区域 */
+.search-field-wrapper:focused-within {
+    -fx-border-color: #326CE5;
+}
+
+.search-field-separator {
+    -fx-text-fill: #D0D0D0;
+    -fx-font-size: 14px;
+    -fx-padding: 0 1 0 1;
+}
+
+.search-field-inner {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-padding: 3 6;
+    -fx-pref-height: 26;
+    -fx-font-size: 13px;
+    -fx-text-fill: #333;
+    -fx-prompt-text-fill: #999;
+}
+
+.search-field-inner:focused {
+    -fx-border-color: transparent;
+    -fx-background-color: transparent;
+}
+
+/* 搜索框内嵌按钮（刷新、展开、收起） */
+.search-inline-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #777;
+    -fx-font-size: 13px;
+    -fx-padding: 0 3;
+    -fx-background-radius: 0;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-cursor: hand;
+    -fx-pref-height: 26;
+    -fx-min-width: 22;
+    -fx-pref-width: 22;
+    -fx-alignment: CENTER;
+}
+
+/* 最右侧按钮（刷新）贴合输入框圆角 */
+#refreshButton {
+    -fx-background-radius: 0 5px 5px 0;
+}
+
+.search-inline-button:hover {
+    -fx-background-color: #E8F0FE;
+    -fx-text-fill: #326CE5;
+}
+
+.search-inline-button:pressed {
+    -fx-background-color: #C8DAFE;
+    -fx-text-fill: #255AB2;
+}
+
+/* ==================== 状态筛选下拉 ==================== */
+.status-filter-combo {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-background-radius: 0;
+    -fx-padding: 0 0 0 0;
+    -fx-pref-width: 24;
+    -fx-pref-height: 22;
+    -fx-min-width: 24;
+    -fx-min-height: 22;
+    -fx-box-border: transparent;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+
+.status-filter-combo .arrow-button {
+    -fx-background-color: transparent;
+    -fx-padding: 0 1 0 0;
+    -fx-min-width: 8;
+    -fx-pref-width: 8;
+}
+
+.status-filter-combo .arrow {
+    -fx-background-color: #999;
+    -fx-padding: 0;
+    -fx-shape: "M0,0L4,4L8,0";
+    -fx-max-width: 8;
+    -fx-max-height: 5;
+}
+
+.status-filter-combo .list-cell {
+    -fx-font-size: 12px;
+    -fx-text-fill: #333;
+    -fx-padding: 4 10;
+    -fx-background-color: transparent;
+}
+
+.status-filter-combo .list-cell:hover {
+    -fx-background-color: #E8F0FE;
+}
+
+/* ==================== 折叠标签 ==================== */
+.collapse-tab {
+    -fx-shape: "M0,0 A14,22 0 0,1 0,44 Z";
+    -fx-background-color: rgba(180, 180, 180, 0.4);
+    -fx-min-width: 14;
+    -fx-pref-width: 14;
+    -fx-max-width: 14;
+    -fx-min-height: 44;
+    -fx-pref-height: 44;
+    -fx-max-height: 44;
+    -fx-cursor: hand;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-padding: 0;
+    -fx-font-size: 9px;
+    -fx-text-fill: rgba(80, 80, 80, 0.7);
+    -fx-alignment: CENTER;
+    -fx-content-display: CENTER;
+}
+
+.collapse-tab:hover {
+    -fx-background-color: rgba(50, 108, 229, 0.6);
+    -fx-text-fill: white;
+}
+
+.collapse-tab.collapse-tab-collapsed {
+    -fx-shape: "M14,0 A14,22 0 0,0 14,44 Z";
+}
+
+/* ==================== 日志面板 ==================== */
+.log-pane {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: transparent;
+    -fx-border-radius: 0;
+    -fx-padding: 10px;
+}
+
+/* ==================== 日志区域 ==================== */
 .log-area {
     -fx-fill: #E0E0E0;
     -fx-font-size: 12px;
@@ -66,7 +227,7 @@
     -fx-padding: 0 10 10 10;
     -fx-border-color: #326CE5;
     -fx-border-width: 1;
-    -fx-border-radius: 5px;
+    -fx-border-radius: 6px;
     -fx-control-inner-background: #1E1E1E;
     -fx-font-family: "JetBrains Mono", "Courier New", monospace;
     -fx-line-spacing: 0px;
@@ -82,48 +243,42 @@
     -fx-font-size: 12px;
 }
 
-/* 默认文本 */
 .plain-text {
     -fx-fill: #E0E0E0;
     -fx-font-size: 12px;
 }
 
-/* 内联搜索高亮 - 关键字1 黄色 */
+/* ==================== 搜索高亮 ==================== */
 .search-highlight-0 {
     -fx-fill: #1E1E1E;
     -rtfx-background-color: #FFD54F;
     -fx-font-size: 12px;
 }
 
-/* 关键字2 青色 */
 .search-highlight-1 {
     -fx-fill: #1E1E1E;
     -rtfx-background-color: #80DEEA;
     -fx-font-size: 12px;
 }
 
-/* 关键字3 紫色 */
 .search-highlight-2 {
     -fx-fill: #1E1E1E;
     -rtfx-background-color: #CE93D8;
     -fx-font-size: 12px;
 }
 
-/* 关键字4 绿色 */
 .search-highlight-3 {
     -fx-fill: #1E1E1E;
     -rtfx-background-color: #A5D6A7;
     -fx-font-size: 12px;
 }
 
-/* 关键字5 橙色 */
 .search-highlight-4 {
     -fx-fill: #1E1E1E;
     -rtfx-background-color: #FFAB91;
     -fx-font-size: 12px;
 }
 
-/* 当前匹配橙色 */
 .search-highlight-current {
     -fx-fill: #FFFFFF;
     -rtfx-background-color: #FF6D00;
@@ -136,10 +291,10 @@
     -fx-text-fill: #555;
     -fx-font-size: 13px;
     -fx-padding: 4 12;
-    -fx-background-radius: 4px;
+    -fx-background-radius: 5px;
     -fx-border-color: #D0D0D0;
     -fx-border-width: 1;
-    -fx-border-radius: 4px;
+    -fx-border-radius: 5px;
     -fx-cursor: hand;
     -fx-pref-height: 28;
 }
@@ -151,6 +306,35 @@
 }
 
 .toolbar-button:pressed {
+    -fx-background-color: #255AB2;
+    -fx-text-fill: #FFF;
+    -fx-border-color: #255AB2;
+}
+
+/* 图标按钮（刷新等） */
+.icon-button {
+    -fx-background-color: #FFFFFF;
+    -fx-text-fill: #555;
+    -fx-font-size: 15px;
+    -fx-padding: 2 10;
+    -fx-background-radius: 5px;
+    -fx-border-color: #D0D0D0;
+    -fx-border-width: 1;
+    -fx-border-radius: 5px;
+    -fx-cursor: hand;
+    -fx-pref-height: 28;
+    -fx-pref-width: 36;
+    -fx-min-width: 36;
+    -fx-alignment: CENTER;
+}
+
+.icon-button:hover {
+    -fx-background-color: #326CE5;
+    -fx-text-fill: #FFF;
+    -fx-border-color: #326CE5;
+}
+
+.icon-button:pressed {
     -fx-background-color: #255AB2;
     -fx-text-fill: #FFF;
     -fx-border-color: #255AB2;
@@ -175,8 +359,8 @@
     -fx-font-size: 13px;
     -fx-background-color: #F5F5F5;
     -fx-border-color: #D8D8D8;
-    -fx-border-radius: 4px;
-    -fx-background-radius: 4px;
+    -fx-border-radius: 5px;
+    -fx-background-radius: 5px;
     -fx-padding: 4 8;
     -fx-pref-height: 28;
 }
@@ -186,14 +370,13 @@
     -fx-background-color: #FFFFFF;
 }
 
-/* 搜索 + 按钮 */
 .search-add-button {
     -fx-background-color: #326CE5;
     -fx-text-fill: #FFF;
     -fx-font-size: 14px;
     -fx-font-weight: bold;
     -fx-padding: 2 10;
-    -fx-background-radius: 4px;
+    -fx-background-radius: 5px;
     -fx-cursor: hand;
     -fx-pref-height: 28;
 }
@@ -202,7 +385,6 @@
     -fx-background-color: #255AB2;
 }
 
-/* 搜索导航按钮 */
 .search-nav-button {
     -fx-background-color: transparent;
     -fx-text-fill: #555;
@@ -218,7 +400,6 @@
     -fx-text-fill: #333;
 }
 
-/* 匹配计数 */
 .search-match-label {
     -fx-text-fill: #888;
     -fx-font-size: 11px;
@@ -226,7 +407,6 @@
     -fx-alignment: CENTER_RIGHT;
 }
 
-/* 搜索关闭按钮 */
 .search-close-button {
     -fx-background-color: transparent;
     -fx-text-fill: #888;
@@ -242,12 +422,10 @@
     -fx-text-fill: #C62828;
 }
 
-/* 标签行 */
 .search-tags-row {
     -fx-padding: 4 0 0 0;
 }
 
-/* 搜索标签外框 */
 .search-tag-box {
     -fx-background-color: #F0F0F0;
     -fx-background-radius: 10px;
@@ -260,7 +438,6 @@
     -fx-background-color: #E0E0E0;
 }
 
-/* 搜索标签文字 - 小字体，截断 */
 .search-tag {
     -fx-font-size: 11px;
     -fx-text-fill: #333;
@@ -268,20 +445,21 @@
     -fx-wrap-text: false;
 }
 
-/* 标签颜色 - 与高亮颜色对应 */
 .search-tag-0 { -fx-text-fill: #8B6914; }
 .search-tag-1 { -fx-text-fill: #00695C; }
 .search-tag-2 { -fx-text-fill: #6A1B9A; }
 .search-tag-3 { -fx-text-fill: #2E7D32; }
 .search-tag-4 { -fx-text-fill: #BF360C; }
 
-/* 标签删除按钮 */
 .search-tag-remove {
     -fx-background-color: transparent;
     -fx-font-size: 11px;
-    -fx-padding: 0 2 0 2;
+    -fx-padding: 2 4 2 4;
     -fx-cursor: hand;
     -fx-text-fill: #999;
+    -fx-min-width: 20;
+    -fx-min-height: 20;
+    -fx-alignment: CENTER;
 }
 
 .search-tag-remove:hover {
@@ -289,8 +467,6 @@
 }
 
 /* ==================== 通用组件 ==================== */
-
-/* 行号样式 */
 .line-number {
     -fx-background-color: #2D2D2D;
     -fx-text-fill: #E0E0E0;
@@ -302,20 +478,18 @@
     -fx-pref-height: -1;
 }
 
-/* 上下文分隔符 */
 .context-delimiter {
     -fx-fill: #666666;
     -fx-font-weight: bold;
     -fx-font-size: 12px;
 }
 
-/* 输入框 */
 .text-field {
     -fx-background-color: #FFFFFF;
     -fx-text-fill: #333333;
     -fx-prompt-text-fill: #888888;
     -fx-border-color: #CFD8DC;
-    -fx-border-radius: 4px;
+    -fx-border-radius: 5px;
     -fx-padding: 4 8px;
     -fx-pref-height: 28;
     -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.05), 3, 0, 0, 1);
@@ -325,7 +499,6 @@
     -fx-border-color: #326CE5;
 }
 
-/* 旧版 action-button 保留兼容 */
 .action-button {
     -fx-background-color: #FFFFFF;
     -fx-text-fill: #555;
@@ -344,24 +517,34 @@
     -fx-border-color: #326CE5;
 }
 
-/* 设置按钮图标 */
-#settingsButton {
-    -fx-pref-width: 32px;
-    -fx-pref-height: 32px;
-    -fx-graphic: url("/com/longfor/lmk/k8slogviewer/icons/settings.png");
+/* 设置按钮 - 工具栏右侧 */
+.settings-button {
     -fx-background-color: transparent;
     -fx-cursor: hand;
+    -fx-padding: 3;
+    -fx-pref-width: 30;
+    -fx-pref-height: 28;
+    -fx-background-radius: 5px;
+    -fx-alignment: CENTER;
 }
 
-/* 换行按钮 - 覆盖 ToggleButton 默认样式 */
+.settings-button:hover {
+    -fx-background-color: #E8E8E8;
+}
+
+.settings-button:pressed {
+    -fx-background-color: #D0D0D0;
+}
+
+/* 换行按钮 */
 #wrapButton {
     -fx-background-color: #FFFFFF;
     -fx-text-fill: #555;
     -fx-padding: 4 12 4 12;
-    -fx-background-radius: 4px;
+    -fx-background-radius: 5px;
     -fx-border-color: #D0D0D0;
     -fx-border-width: 1;
-    -fx-border-radius: 4px;
+    -fx-border-radius: 5px;
     -fx-cursor: hand;
     -fx-background-insets: 0;
     -fx-border-insets: 0;
@@ -398,20 +581,81 @@
     -fx-background-insets: 0;
 }
 
-/* 标签文本 */
 .label-tab {
     -fx-text-fill: #444444;
     -fx-font-size: 12px;
 }
 
-/* 进度指示器 */
 .progress-indicator .indicator {
     -fx-accent: #326CE5;
 }
 
+/* ==================== SplitPane ==================== */
+.split-pane-divider {
+    -fx-background-color: #E0E0E0;
+    -fx-padding: 0 1 0 0;
+}
+
+.split-pane-divider:hover {
+    -fx-background-color: #326CE5;
+}
+
+/* ==================== 滚动条 ==================== */
+.scroll-bar:vertical .track {
+    -fx-background-color: #F5F5F5;
+}
+
+.scroll-bar:vertical .thumb {
+    -fx-background-color: #C0C0C0;
+    -fx-background-radius: 4;
+}
+
+.scroll-bar:vertical .thumb:hover {
+    -fx-background-color: #90A4AE;
+}
+
+.scroll-bar:horizontal .track {
+    -fx-background-color: #F5F5F5;
+}
+
+.scroll-bar:horizontal .thumb {
+    -fx-background-color: #C0C0C0;
+    -fx-background-radius: 4;
+}
+
+.scroll-bar:horizontal .thumb:hover {
+    -fx-background-color: #90A4AE;
+}
+
+/* ==================== 弹窗 ==================== */
 .dialog-pane {
     -fx-background-color: #ffffff;
     -fx-border-radius: 10;
     -fx-background-radius: 10;
     -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.2), 10, 0, 0, 3);
+}
+
+/* ==================== 右键菜单 ==================== */
+.context-menu {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #D0D0D0;
+    -fx-border-radius: 6px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.15), 8, 0, 0, 2);
+}
+
+.context-menu .menu-item {
+    -fx-padding: 6 16;
+}
+
+.context-menu .menu-item .label {
+    -fx-text-fill: #333;
+    -fx-font-size: 12.5px;
+}
+
+.context-menu .menu-item:hover {
+    -fx-background-color: #E8F0FE;
+}
+
+.context-menu .menu-item:hover .label {
+    -fx-text-fill: #326CE5;
 }

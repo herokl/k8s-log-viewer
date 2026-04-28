@@ -1,16 +1,22 @@
 package com.longfor.lmk.k8slogviewer.service;
 
 import com.longfor.lmk.k8slogviewer.config.K8sClientManager;
+import com.longfor.lmk.k8slogviewer.model.PodStatus;
 import com.longfor.lmk.k8slogviewer.utils.CommonUtils;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.V1Namespace;
+import io.kubernetes.client.openapi.models.V1ObjectMeta;
 import io.kubernetes.client.openapi.models.V1Pod;
+import io.kubernetes.client.openapi.models.V1PodStatus;
 import javafx.application.Platform;
+import javafx.scene.Node;
 import javafx.scene.control.TreeItem;
+import javafx.scene.shape.Circle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
@@ -55,7 +61,11 @@ public class ClusterTreeService {
             List<V1Namespace> namespaces = api.listNamespace(
                     null, null, null, null, null, null, null, null, null
             ).getItems();
-            namespaces.parallelStream().forEach(ns -> loadPods(ns, root, api));
+            // 串行加载保证排序生效
+            namespaces.stream()
+                    .sorted(Comparator.comparing(ns -> Optional.ofNullable(ns.getMetadata())
+                            .map(V1ObjectMeta::getName).orElse("zzz"), String.CASE_INSENSITIVE_ORDER))
+                    .forEach(ns -> loadPods(ns, root, api));
         } catch (ApiException e) {
             Platform.runLater(() ->
                     CommonUtils.showAlert("错误", "无法加载 Kubernetes 数据: " + e.getResponseBody()));
@@ -68,7 +78,7 @@ public class ClusterTreeService {
 
     private void loadPods(V1Namespace ns, TreeItem<String> root, CoreV1Api api) {
         String nsName = Optional.ofNullable(ns.getMetadata())
-                .map(m -> m.getName())
+                .map(V1ObjectMeta::getName)
                 .orElse("unknown");
         TreeItem<String> nsItem = new TreeItem<>(nsName);
         try {
@@ -76,19 +86,48 @@ public class ClusterTreeService {
                     nsName, null, null, null, null, null, null, null, null, null
             ).getItems();
             if (pods != null) {
-                for (V1Pod pod : pods) {
-                    Optional.ofNullable(pod.getMetadata())
-                            .map(m -> m.getName())
-                            .ifPresent(name -> nsItem.getChildren().add(new TreeItem<>(name)));
-                }
+                // 按 Pod 名称排序，Running 优先
+                pods.stream()
+                        .sorted(Comparator
+                                .comparing((V1Pod p) -> {
+                                    String phase = Optional.ofNullable(p.getStatus())
+                                            .map(V1PodStatus::getPhase).orElse("Unknown");
+                                    return statusOrder(phase);
+                                })
+                                .thenComparing(p -> Optional.ofNullable(p.getMetadata())
+                                        .map(V1ObjectMeta::getName).orElse("zzz"), String.CASE_INSENSITIVE_ORDER))
+                        .forEach(pod -> {
+                            String name = Optional.ofNullable(pod.getMetadata())
+                                    .map(V1ObjectMeta::getName).orElse(null);
+                            if (name == null) return;
+
+                            String phase = Optional.ofNullable(pod.getStatus())
+                                    .map(V1PodStatus::getPhase).orElse("Unknown");
+                            TreeItem<String> podItem = new TreeItem<>(name);
+                            Node dot = createStatusDot(phase);
+                            podItem.setGraphic(dot);
+                            nsItem.getChildren().add(podItem);
+                        });
             }
         } catch (ApiException e) {
             log.info("获取命名空间[{}] Pod 失败: {}", nsName, e.getResponseBody());
         }
         if (!nsItem.getChildren().isEmpty()) {
-            synchronized (root) {
-                root.getChildren().add(nsItem);
-            }
+            root.getChildren().add(nsItem);
         }
+    }
+
+    /** 状态排序权重：使用 PodStatus 枚举统一管理 */
+    private static int statusOrder(String phase) {
+        return PodStatus.fromPhase(phase).getOrder();
+    }
+
+    /** 根据 Pod 状态创建彩色圆点标识，phase 存入 userData 供筛选使用 */
+    private static Node createStatusDot(String phase) {
+        PodStatus status = PodStatus.fromPhase(phase);
+        Circle dot = new Circle(5);
+        dot.setStyle("-fx-fill: " + status.getColorHex() + ";");
+        dot.setUserData(phase);
+        return dot;
     }
 }

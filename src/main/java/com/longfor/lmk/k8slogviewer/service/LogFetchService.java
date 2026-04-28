@@ -32,9 +32,18 @@ public final class LogFetchService {
     // ==================== 流式获取（K8s Java SDK） ====================
 
     /**
-     * 通过 K8s Java SDK 流式获取日志，每行通过 logLineConsumer 回调。
+     * 流式获取日志（含头部信息），兼容旧调用。
      */
     public static void fetchStreaming(Consumer<String> logLineConsumer) throws IOException {
+        fetchStreaming(logLineConsumer, true);
+    }
+
+    /**
+     * 通过 K8s Java SDK 流式获取日志，每行通过 logLineConsumer 回调。
+     * @param logLineConsumer 日志行消费者
+     * @param emitHeader 是否输出头部信息（首次连接输出，重连不输出）
+     */
+    public static void fetchStreaming(Consumer<String> logLineConsumer, boolean emitHeader) throws IOException {
         K8sQuery query = AppConfig.getK8sQuery();
 
         // 构建等价 kubectl 命令字符串（仅用于日志展示）
@@ -42,7 +51,9 @@ public final class LogFetchService {
         log.info("执行命令: {}", cmdStr);
 
         // 输出头部信息 + 分割线，复用现有 headerArea 机制
-        emitHeaderInfo(query, logLineConsumer);
+        if (emitHeader) {
+            emitHeaderInfo(query, logLineConsumer);
+        }
 
         CoreV1Api api = K8sClientManager.getCoreV1Api();
         Integer sinceSeconds = query.getSinceSeconds() > 0 ? (int) query.getSinceSeconds() : null;

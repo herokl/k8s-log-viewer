@@ -80,7 +80,11 @@ public class CommonUtils {
         if (node.isLeaf()) {
             String value = node.getValue();
             boolean matches = value != null && value.toLowerCase().contains(filter.toLowerCase());
-            return matches ? node : null;
+            if (matches) {
+                // 保留原始节点（含 graphic 和 userData）
+                return node;
+            }
+            return null;
         }
 
         // 非叶子节点：处理子节点
@@ -94,10 +98,9 @@ public class CommonUtils {
 
         // 检查父节点是否需要保留
         if (!newParent.getChildren().isEmpty()) {
-            newParent.setExpanded(filter != null && !filter.isEmpty());
+            newParent.setExpanded(node.isExpanded() || (filter != null && !filter.isEmpty()));
             return newParent;
         } else {
-            // 如果没有子节点，但父节点本身匹配也保留（根据需求调整）
             if (newParent.getValue() != null &&
                     newParent.getValue().toLowerCase().contains(filter.toLowerCase())) {
                 return newParent;

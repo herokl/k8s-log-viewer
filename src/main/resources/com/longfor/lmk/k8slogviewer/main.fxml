@@ -10,31 +10,34 @@
             styleClass="root">
     <!-- 中间和右侧使用 SplitPane -->
     <center>
-        <SplitPane fx:id="splitPane" dividerPositions="0.3" SplitPane.resizableWithParent="true">
-            <!-- 左侧树视图 + 折叠条 -->
+        <StackPane>
+        <SplitPane fx:id="splitPane" dividerPositions="0.18" SplitPane.resizableWithParent="true">
+            <!-- 左侧树视图 -->
             <HBox fx:id="treePaneWrapper" spacing="0" alignment="CENTER_RIGHT">
                 <!-- 左侧树视图 -->
-                <VBox fx:id="treePane" spacing="10" styleClass="tree-pane" HBox.hgrow="ALWAYS">
+                <VBox fx:id="treePane" spacing="8" styleClass="tree-pane" HBox.hgrow="ALWAYS">
                     <padding>
                         <Insets top="10" right="10" bottom="10" left="10"/>
                     </padding>
 
-                    <HBox spacing="10">
-                        <TextField fx:id="searchField" promptText="搜索命名空间/Pod/容器..."
-                                   HBox.hgrow="ALWAYS" styleClass="text-field"/>
-                        <Button fx:id="refreshButton" text="刷新" styleClass="toolbar-button"
+                    <HBox fx:id="searchFieldWrapper" styleClass="search-field-wrapper"
+                          alignment="CENTER_LEFT" spacing="0" HBox.hgrow="ALWAYS">
+                        <ComboBox fx:id="statusFilterCombo" styleClass="status-filter-combo"/>
+                        <Label styleClass="search-field-separator" text="|"/>
+                        <TextField fx:id="searchField" promptText="搜索命名空间/Pod..."
+                                   styleClass="search-field-inner" HBox.hgrow="ALWAYS"/>
+                        <Button fx:id="expandAllButton" text="^" styleClass="search-inline-button"
+                                onMouseClicked="#expandAllOnClick"/>
+                        <Button fx:id="collapseAllButton" text="v" styleClass="search-inline-button"
+                                onMouseClicked="#collapseAllOnClick"/>
+                        <Button fx:id="refreshButton" text="⟳" styleClass="search-inline-button"
                                 onMouseClicked="#refreshOnClick"/>
-                        <ProgressIndicator fx:id="loadingIndicator" visible="false" maxWidth="20" maxHeight="20"/>
+                        <ProgressIndicator fx:id="loadingIndicator" visible="false" maxWidth="18" maxHeight="18"/>
                     </HBox>
 
                     <TreeView fx:id="treeView" styleClass="tree-view" VBox.vgrow="ALWAYS"/>
                 </VBox>
 
-                <!-- 折叠条 -->
-                <VBox fx:id="collapseBar" styleClass="collapse-bar"
-                      alignment="CENTER" onMouseClicked="#toggleTreePane">
-                    <Label fx:id="collapseArrow" text="◂"/>
-                </VBox>
             </HBox>
 
             <!-- 右侧日志窗口 -->
@@ -74,6 +77,9 @@
                                 onMouseClicked="#openLogFileClick"/>
                         <ToggleButton fx:id="wrapButton" styleClass="toolbar-button"
                                       onAction="#onWrapToggle"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Button fx:id="settingsButton" onMouseClicked="#handleOpenSettings"
+                                styleClass="settings-button"/>
                     </HBox>
                 </VBox>
                 <!-- 置顶日志区域 -->
@@ -86,18 +92,7 @@
                 </VBox>
             </VBox>
         </SplitPane>
+        <Button fx:id="collapseTab" styleClass="collapse-tab" onMouseClicked="#toggleTreePane"/>
+        </StackPane>
     </center>
-
-    <!-- 右侧菜单 -->
-    <right>
-        <VBox styleClass="right-menu" alignment="TOP_CENTER" spacing="10" VBox.vgrow="ALWAYS"
-              style="-fx-background-color: #f4f6f8; -fx-min-width: 20;">
-            <padding>
-                <Insets top="10" right="10" bottom="10" left="10"/>
-            </padding>
-            <Button fx:id="settingsButton" onMouseClicked="#handleOpenSettings"
-                    style="-fx-background-color: transparent; -fx-cursor: hand;"/>
-            <Label text="设置" style="-fx-font-size: 10px; -fx-text-fill: #666; -fx-alignment: CENTER;"/>
-        </VBox>
-    </right>
 </BorderPane>

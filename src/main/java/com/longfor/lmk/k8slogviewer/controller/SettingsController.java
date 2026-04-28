@@ -29,6 +29,10 @@ public class SettingsController {
     private TextField logFlushIntervalField;
     @FXML
     private TextField searchRefreshIntervalField;
+    @FXML
+    private CheckBox treeAutoRefreshCheckBox;
+    @FXML
+    private TextField treeAutoRefreshIntervalField;
 
     @FXML
     public void initialize() {
@@ -37,6 +41,9 @@ public class SettingsController {
         maxLogSizeField.setText(String.valueOf(AppPreferences.getMaxLogSizeMB()));
         logFlushIntervalField.setText(String.valueOf(AppPreferences.getLogFlushIntervalMs()));
         searchRefreshIntervalField.setText(String.valueOf(AppPreferences.getSearchRefreshIntervalMs()));
+        treeAutoRefreshCheckBox.setSelected(AppPreferences.isTreeAutoRefresh());
+        treeAutoRefreshIntervalField.setText(String.valueOf(AppPreferences.getTreeAutoRefreshIntervalSec()));
+        treeAutoRefreshIntervalField.disableProperty().bind(treeAutoRefreshCheckBox.selectedProperty().not());
     }
 
     @FXML
@@ -124,6 +131,18 @@ public class SettingsController {
                 AppPreferences.setSearchRefreshIntervalMs(ms);
             } catch (NumberFormatException e) {
                 log.warn("无效的搜索刷新间隔: {}", searchIntervalText);
+            }
+        }
+
+        // 保存容器树自动刷新设置
+        AppPreferences.setTreeAutoRefresh(treeAutoRefreshCheckBox.isSelected());
+        String treeRefreshText = treeAutoRefreshIntervalField.getText();
+        if (treeRefreshText != null && !treeRefreshText.isBlank()) {
+            try {
+                int sec = Integer.parseInt(treeRefreshText.trim());
+                AppPreferences.setTreeAutoRefreshIntervalSec(sec);
+            } catch (NumberFormatException e) {
+                log.warn("无效的容器树刷新间隔: {}", treeRefreshText);
             }
         }
 
