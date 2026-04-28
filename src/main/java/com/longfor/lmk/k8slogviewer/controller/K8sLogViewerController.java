@@ -11,6 +11,8 @@ import com.longfor.lmk.k8slogviewer.utils.CommonUtils;
 import com.longfor.lmk.k8slogviewer.utils.ExecutorManager;
 import com.longfor.lmk.k8slogviewer.utils.LogStyleUtil;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
+import javafx.animation.FadeTransition;
+import javafx.animation.PauseTransition;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.geometry.Bounds;
@@ -30,6 +32,8 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.SVGPath;
 import javafx.stage.FileChooser;
+import javafx.stage.Popup;
+import javafx.util.Duration;
 import org.fxmisc.flowless.VirtualizedScrollPane;
 import org.fxmisc.richtext.CodeArea;
 import org.fxmisc.richtext.model.StyleSpans;
@@ -316,7 +320,22 @@ public class K8sLogViewerController {
 
         Label tagLabel = new Label(display);
         tagLabel.getStyleClass().addAll("search-tag", colorClass);
-        tagLabel.setTooltip(new Tooltip(keyword));
+        // 悬停提示完整内容（长停留，不自动消失）
+        Tooltip tooltip = new Tooltip(keyword);
+        tooltip.setMaxWidth(400);
+        tooltip.setWrapText(true);
+        tooltip.setShowDelay(Duration.millis(200));
+        tooltip.setShowDuration(Duration.seconds(300));
+        tooltip.setStyle("-fx-background-color: #1a3a5c; -fx-text-fill: #e0e8f0; -fx-padding: 8 12; -fx-background-radius: 4; -fx-border-color: #3a7abd; -fx-border-radius: 4; -fx-font-size: 12px;");
+        tagLabel.setTooltip(tooltip);
+        // 单击复制到剪贴板，弹出"复制成功"提示后自动消失
+        tagLabel.setOnMouseClicked(e -> {
+            ClipboardContent content = new ClipboardContent();
+            content.putString(keyword);
+            Clipboard.getSystemClipboard().setContent(content);
+            showAutoHideToast(tagLabel, "复制成功");
+            e.consume();
+        });
 
         Button removeBtn = new Button("×");
         removeBtn.getStyleClass().add("search-tag-remove");
@@ -346,6 +365,42 @@ public class K8sLogViewerController {
     }
 
     /**
+     * 在窗口顶部中央弹出短暂提示（类似网页 toast），1秒后淡出消失。
+     */
+    private void showAutoHideToast(Node anchor, String message) {
+        Popup toast = new Popup();
+        toast.setAutoFix(true);
+
+        // 绿色圆圈对勾 + 文字，白色背景
+        Label check = new Label("✓");
+        check.setStyle("-fx-text-fill: white; -fx-font-size: 11px; -fx-font-weight: bold; -fx-background-color: #4caf50; -fx-background-radius: 10; -fx-alignment: center; -fx-pref-width: 20; -fx-pref-height: 20;");
+        Label text = new Label(message);
+        text.setStyle("-fx-text-fill: #333; -fx-font-size: 13px;");
+        HBox box = new HBox(8, check, text);
+        box.setStyle("-fx-background-color: white; -fx-padding: 8 18; -fx-background-radius: 6; -fx-alignment: center; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 8, 0, 0, 2);");
+        toast.getContent().add(box);
+
+        // 窗口顶部居中
+        var stage = anchor.getScene().getWindow();
+        toast.show(stage);
+        Platform.runLater(() -> {
+            toast.setX(stage.getX() + (stage.getWidth() - box.getWidth()) / 2);
+            toast.setY(stage.getY() + 40);
+        });
+
+        // 1秒后淡出
+        PauseTransition wait = new PauseTransition(Duration.millis(500));
+        wait.setOnFinished(e -> {
+            FadeTransition fade = new FadeTransition(Duration.millis(500), box);
+            fade.setFromValue(1.0);
+            fade.setToValue(0.0);
+            fade.setOnFinished(ev -> toast.hide());
+            fade.play();
+        });
+        wait.play();
+    }
+
+    /**
      * 从标签容器构建搜索关键字字符串，使用 \u0000 分隔各关键字（支持关键字本身含空格）。
      */
     private String buildSearchKeywordFromTags() {
@@ -355,7 +410,8 @@ public class K8sLogViewerController {
             String kw = (String) ((HBox) node).getUserData();
             sb.append(kw).append('\0');
         }
-        return sb.toString().trim();
+        // 注意：不能用 trim()，因为 \0 <= ' ' 会被 trim 去掉，导致 parseSearchKeywords 误走空格分隔分支
+        return sb.toString();
     }
 
     /**
@@ -946,11 +1002,6 @@ public class K8sLogViewerController {
             diskMatchLineNumbers.clear();
             currentDiskMatchIndex = -1;
             lastKeyword = "";
-            // 截断后重新搜索以更新匹配列表
-            String kw = buildSearchKeywordFromTags();
-            if (kw != null && !kw.isBlank()) {
-                searchDiskInBackground(kw, false);
-            }
             rehighlightLogArea(null);
             updateMatchLabel();
         }

@@ -4,10 +4,8 @@ import com.longfor.lmk.k8slogviewer.config.AppPreferences;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
+import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.time.Duration;
@@ -79,7 +77,7 @@ public class PodLogFileManager {
                     // 截断保留文件，仅保留最新 1000 行
                     if (!files.isEmpty()) {
                         Path latestFile = files.get(0);
-                        List<String> allLines = Files.readAllLines(latestFile);
+                        List<String> allLines = readAllLinesSafe(latestFile);
                         if (allLines.size() > 1000) {
                             List<String> recentLines = allLines.subList(allLines.size() - 1000, allLines.size());
                             Files.write(latestFile, recentLines, StandardOpenOption.TRUNCATE_EXISTING);
@@ -105,7 +103,7 @@ public class PodLogFileManager {
         if (!Files.exists(root)) return;
         try (Stream<Path> walk = Files.walk(root)) {
             walk.filter(Files::isDirectory)
-                    .filter(dir -> isEmptyDirectory(dir))
+                    .filter(this::isEmptyDirectory)
                     .sorted(java.util.Comparator.comparingInt(Path::getNameCount).reversed())
                     .forEach(dir -> {
                         try {
@@ -143,7 +141,7 @@ public class PodLogFileManager {
         Files.createDirectories(dir);
 
         this.currentLogFile = dir.resolve(fileName);
-        this.writer = new BufferedWriter(new FileWriter(currentLogFile.toFile(), true));
+        this.writer = new BufferedWriter(new FileWriter(currentLogFile.toFile(), StandardCharsets.UTF_8, true));
         this.lastSizeCheckTime = System.currentTimeMillis();
 
         // 切换 Pod 时清理旧文件（按时间）
@@ -221,7 +219,7 @@ public class PodLogFileManager {
         Path logFile = getLatestLogFile(podName);
         if (logFile == null) return Collections.emptyList();
 
-        try (Stream<String> lines = Files.lines(logFile, StandardCharsets.UTF_8)) {
+        try (Stream<String> lines = linesSafe(logFile)) {
             List<String> allLines = lines.collect(Collectors.toList());
             int total = allLines.size();
             int start = Math.max(0, total - fromEnd - count);
@@ -244,7 +242,7 @@ public class PodLogFileManager {
         Path logFile = getLatestLogFile(podName);
         if (logFile == null) return 0;
 
-        try (Stream<String> lines = Files.lines(logFile, StandardCharsets.UTF_8)) {
+        try (Stream<String> lines = linesSafe(logFile)) {
             return (int) lines.count();
         } catch (IOException e) {
             log.warn("统计日志行数失败: {}", logFile, e);
@@ -264,7 +262,7 @@ public class PodLogFileManager {
         Path logFile = getLatestLogFile(podName);
         if (logFile == null) return Collections.emptyList();
 
-        try (Stream<String> lines = Files.lines(logFile, StandardCharsets.UTF_8)) {
+        try (Stream<String> lines = linesSafe(logFile)) {
             List<String> result = lines.skip(startLine).limit(count).collect(Collectors.toList());
             return result;
         } catch (IOException e) {
@@ -299,7 +297,7 @@ public class PodLogFileManager {
         List<Integer> matchedLines = new ArrayList<>();
         int totalLines = 0;
 
-        try (Stream<String> lines = Files.lines(logFile, StandardCharsets.UTF_8)) {
+        try (Stream<String> lines = linesSafe(logFile)) {
             Iterable<String> iterable = lines::iterator;
             for (String line : iterable) {
                 String lowerLine = line.toLowerCase();
@@ -368,7 +366,7 @@ public class PodLogFileManager {
                 writer = null;
                 
                 // 读取文件所有行
-                List<String> allLines = Files.readAllLines(currentLogFile);
+                List<String> allLines = readAllLinesSafe(currentLogFile);
                 
                 // 计算需要保留的行数（保留最新的，目标是控制在最大容量的50%左右）
                 int linesToKeep = Math.max(100, allLines.size() / 2);
@@ -380,7 +378,7 @@ public class PodLogFileManager {
                 Files.write(currentLogFile, recentLines, StandardOpenOption.TRUNCATE_EXISTING);
                 
                 // 重新打开 writer
-                writer = new BufferedWriter(new FileWriter(currentLogFile.toFile(), true));
+                writer = new BufferedWriter(new FileWriter(currentLogFile.toFile(), StandardCharsets.UTF_8, true));
                 
                 log.info("已清除历史日志，保留最新 {} 行，当前大小约 {} MB", recentLines.size(), file.length() / 1024 / 1024);
                 
@@ -415,5 +413,32 @@ public class PodLogFileManager {
         } catch (IOException e) {
             log.debug("列出目录失败: {}", dir, e);
         }
+    }
+
+    /**
+     * 安全读取文件所有行，遇到非 UTF-8 字节用 � 替代而非抛异常。
+     */
+    private static List<String> readAllLinesSafe(Path file) throws IOException {
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(Files.newInputStream(file),
+                        StandardCharsets.UTF_8.newDecoder()
+                                .onMalformedInput(CodingErrorAction.REPLACE)
+                                .onUnmappableCharacter(CodingErrorAction.REPLACE)))) {
+            return reader.lines().collect(Collectors.toList());
+        }
+    }
+
+    /**
+     * 安全创建按行读取的 Stream，遇到非 UTF-8 字节用 � 替代而非抛异常。
+     */
+    private static Stream<String> linesSafe(Path file) throws IOException {
+        BufferedReader reader = new BufferedReader(
+                new InputStreamReader(Files.newInputStream(file),
+                        StandardCharsets.UTF_8.newDecoder()
+                                .onMalformedInput(CodingErrorAction.REPLACE)
+                                .onUnmappableCharacter(CodingErrorAction.REPLACE)));
+        return reader.lines().onClose(() -> {
+            try { reader.close(); } catch (IOException ignored) {}
+        });
     }
 }
