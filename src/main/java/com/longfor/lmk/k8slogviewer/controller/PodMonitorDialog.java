@@ -81,7 +81,9 @@ public class PodMonitorDialog {
 
             stage = new Stage();
             stage.setTitle("性能监控 - " + namespace + "/" + podName);
-            stage.setScene(new Scene(root, 900, 400));
+            Scene scene = new Scene(root, 900, 400);
+            scene.getStylesheets().add(getClass().getResource("/styles.css").toExternalForm());
+            stage.setScene(scene);
             stage.setOnCloseRequest(e -> stopRefresh());
 
             // Ctrl+C 复制当前所有容器使用率摘要到剪贴板
@@ -115,16 +117,28 @@ public class PodMonitorDialog {
 
     private static final String COPYABLE_FIELD_STYLE =
             "-fx-background-color: transparent; -fx-background-insets: 0; -fx-border-color: transparent; " +
-            "-fx-font-size: 12px; -fx-text-fill: #333; -fx-padding: 0; -fx-pref-column-count: 6;";
+            "-fx-font-size: 12px; -fx-text-fill: #333; -fx-padding: 0;";
+
+    private static final String POD_NAME_STYLE =
+            "-fx-background-color: transparent; -fx-background-insets: 0; -fx-border-color: transparent; " +
+            "-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #326CE5; -fx-padding: 0;";
+
+    private static final String STATUS_FIELD_STYLE =
+            "-fx-background-color: #F0F4FF; -fx-background-insets: 0; -fx-border-color: transparent; " +
+            "-fx-font-size: 12px; -fx-font-weight: bold; -fx-padding: 2 10; -fx-background-radius: 4;";
+
+    private static final String DETAIL_FIELD_STYLE =
+            "-fx-background-color: transparent; -fx-background-insets: 0; -fx-border-color: transparent; " +
+            "-fx-font-size: 12px; -fx-text-fill: #555; -fx-padding: 0;";
 
     @FXML
     public void initialize() {
         podNameLabel.setText(podName);
-        podNameLabel.setStyle(COPYABLE_FIELD_STYLE);
-        statusLabel.setStyle(COPYABLE_FIELD_STYLE);
-        nodeLabel.setStyle(COPYABLE_FIELD_STYLE);
-        ipLabel.setStyle(COPYABLE_FIELD_STYLE);
-        restartLabel.setStyle(COPYABLE_FIELD_STYLE);
+        podNameLabel.setStyle(POD_NAME_STYLE);
+        statusLabel.setStyle(STATUS_FIELD_STYLE);
+        nodeLabel.setStyle(DETAIL_FIELD_STYLE);
+        ipLabel.setStyle(DETAIL_FIELD_STYLE);
+        restartLabel.setStyle(DETAIL_FIELD_STYLE);
     }
 
     private void refreshData() {
@@ -158,11 +172,11 @@ public class PodMonitorDialog {
 
         podNameLabel.setText(podName);
         statusLabel.setText(status);
-        statusLabel.setStyle(COPYABLE_FIELD_STYLE + "-fx-text-fill: " + statusColor(status) + "; -fx-font-weight: bold;");
+        statusLabel.setStyle(STATUS_FIELD_STYLE + "-fx-text-fill: " + statusColor(status) + ";");
         nodeLabel.setText(nodeName);
         ipLabel.setText(podIP);
         restartLabel.setText(String.valueOf(restartCount));
-        restartLabel.setStyle(COPYABLE_FIELD_STYLE + (restartCount > 0 ? "-fx-text-fill: #E53935;" : "-fx-text-fill: #333;"));
+        restartLabel.setStyle(DETAIL_FIELD_STYLE + (restartCount > 0 ? "-fx-text-fill: #E74C3C; -fx-font-weight: bold;" : ";"));
 
         // 首次加载容器规格
         if (resourceSpecs.isEmpty() && pod.getSpec() != null && pod.getSpec().getContainers() != null) {
@@ -232,22 +246,24 @@ public class PodMonitorDialog {
             cpuChart = createChart("CPU", "#4285F4", spec.cpuReq, spec.cpuLim, cpuSeries);
             memChart = createChart("内存", "#34A853", spec.memReq, spec.memLim, memSeries);
 
-            VBox box = new VBox(4);
+            VBox box = new VBox(6);
             box.setStyle("-fx-background-color: #FFFFFF; -fx-background-radius: 8; " +
-                    "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.06), 4, 0, 0, 1); -fx-padding: 8 12 10 12;");
+                    "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.06), 4, 0, 0, 1); -fx-padding: 10 14 12 14;");
 
             // 标题行：容器名 + CPU/内存百分比
-            HBox titleRow = new HBox(8);
+            HBox titleRow = new HBox(10);
             titleRow.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+            Label icon = new Label("\uD83D\uDCAA");
+            icon.setStyle("-fx-font-size: 13px;");
             Label title = new Label(name);
             title.setStyle("-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: #333;");
             Region spacer = new Region();
             HBox.setHgrow(spacer, javafx.scene.layout.Priority.ALWAYS);
-            cpuPctLabel = new Label("CPU: --");
-            cpuPctLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #4285F4; -fx-font-weight: bold;");
-            memPctLabel = new Label("内存: --");
-            memPctLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #34A853; -fx-font-weight: bold;");
-            titleRow.getChildren().addAll(title, spacer, cpuPctLabel, memPctLabel);
+            cpuPctLabel = new Label("CPU --");
+            cpuPctLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #4285F4; -fx-font-weight: bold;");
+            memPctLabel = new Label("MEM --");
+            memPctLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #34A853; -fx-font-weight: bold;");
+            titleRow.getChildren().addAll(icon, title, spacer, cpuPctLabel, memPctLabel);
             box.getChildren().add(titleRow);
 
             HBox chartsRow = new HBox(12);
@@ -264,8 +280,8 @@ public class PodMonitorDialog {
         void addData(double cpuPct, double memPct) {
             tick++;
             // 更新百分比标签
-            cpuPctLabel.setText("CPU: " + (cpuPct < 0 ? "--" : String.format("%.1f%%", cpuPct * 100)));
-            memPctLabel.setText("内存: " + (memPct < 0 ? "--" : String.format("%.1f%%", memPct * 100)));
+            cpuPctLabel.setText("CPU " + (cpuPct < 0 ? "--" : String.format("%.1f%%", cpuPct * 100)));
+            memPctLabel.setText("MEM " + (memPct < 0 ? "--" : String.format("%.1f%%", memPct * 100)));
 
             // CPU 数据
             ObservableList<XYChart.Data<Number, Number>> cpuData = cpuSeries.getData();

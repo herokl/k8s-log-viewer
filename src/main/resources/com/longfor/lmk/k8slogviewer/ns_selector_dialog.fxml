@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<DialogPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml/1">
+
+    <content>
+        <VBox spacing="10" styleClass="ns-dialog-root">
+            <!-- 顶部工具栏：搜索 + 操作按钮 -->
+            <HBox alignment="CENTER_LEFT" spacing="8" styleClass="ns-dialog-toolbar">
+                <HBox alignment="CENTER_LEFT" styleClass="ns-search-box" HBox.hgrow="ALWAYS">
+                    <TextField fx:id="searchField" promptText="搜索命名空间..." styleClass="ns-search-field-inner" HBox.hgrow="ALWAYS"/>
+                    <Button fx:id="refreshBtn" text="⟳" onAction="#onRefresh" styleClass="ns-search-refresh-btn"/>
+                </HBox>
+                <Button fx:id="selectAllBtn" text="全选" onAction="#onSelectAll" styleClass="ns-select-all-btn"/>
+                <Button fx:id="invertBtn" text="反选" onAction="#onInvertSelection" styleClass="ns-invert-btn"/>
+                <Button fx:id="deselectAllBtn" text="清空" onAction="#onDeselectAll" styleClass="ns-deselect-all-btn"/>
+            </HBox>
+
+            <!-- 左右双栏列表 -->
+            <HBox spacing="8" styleClass="ns-dual-panel" VBox.vgrow="ALWAYS">
+                <!-- 左侧：未选中 -->
+                <VBox styleClass="ns-panel-left" HBox.hgrow="ALWAYS">
+                    <Label text="未选择" styleClass="ns-panel-title"/>
+                    <ListView fx:id="leftListView" styleClass="ns-list-view" VBox.vgrow="ALWAYS"/>
+                </VBox>
+
+                <!-- 中间：移动按钮 -->
+                <VBox alignment="CENTER" spacing="6" styleClass="ns-move-buttons">
+                    <Button text="›" onAction="#onMoveRight" styleClass="ns-move-right-btn"/>
+                    <Button text="»" onAction="#onMoveAllRight" styleClass="ns-move-all-btn"/>
+                    <Button text="‹" onAction="#onMoveLeft" styleClass="ns-move-left-btn"/>
+                    <Button text="«" onAction="#onMoveAllLeft" styleClass="ns-move-all-btn"/>
+                </VBox>
+
+                <!-- 右侧：已选中 -->
+                <VBox styleClass="ns-panel-right" HBox.hgrow="ALWAYS">
+                    <Label text="已选择" styleClass="ns-panel-title"/>
+                    <ListView fx:id="rightListView" styleClass="ns-list-view" VBox.vgrow="ALWAYS"/>
+                </VBox>
+            </HBox>
+
+            <!-- 底部统计 -->
+            <Label fx:id="countLabel" text="" styleClass="ns-count-label"/>
+        </VBox>
+    </content>
+
+    <buttonTypes>
+        <ButtonType text="确定" buttonData="OK_DONE"/>
+        <ButtonType text="取消" buttonData="CANCEL_CLOSE"/>
+    </buttonTypes>
+
+</DialogPane>

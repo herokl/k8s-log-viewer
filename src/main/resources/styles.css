@@ -14,6 +14,23 @@
     -fx-padding: 8px;
 }
 
+/* 树加载遮罩 */
+.tree-loading-overlay {
+    -fx-background-color: rgba(255,255,255,0.85);
+    -fx-alignment: center;
+    -fx-spacing: 10;
+    -fx-padding: 20;
+}
+
+.tree-loading-spinner {
+    -fx-progress-color: #326CE5;
+}
+
+.tree-loading-label {
+    -fx-text-fill: #5C6B7A;
+    -fx-font-size: 13px;
+}
+
 /* ==================== 树视图 ==================== */
 .tree-view {
     -fx-background-color: #FFFFFF;
@@ -93,10 +110,15 @@
     -fx-padding: 0 1 0 1;
 }
 
+/* 覆盖搜索框内嵌输入框所有状态的边框 */
 .search-field-inner {
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
     -fx-background-color: transparent;
-    -fx-border-color: transparent;
     -fx-border-width: 0;
+    -fx-border-color: null;
+    -fx-border-radius: 0;
+    -fx-border-insets: 0;
     -fx-padding: 3 6;
     -fx-pref-height: 26;
     -fx-font-size: 13px;
@@ -104,9 +126,26 @@
     -fx-prompt-text-fill: #999;
 }
 
-.search-field-inner:focused {
-    -fx-border-color: transparent;
+.search-field-inner:focused,
+.search-field-inner:hover,
+.search-field-inner:focused:hover,
+.search-field-inner:disabled {
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
     -fx-background-color: transparent;
+    -fx-border-width: 0;
+    -fx-border-color: null;
+    -fx-border-radius: 0;
+    -fx-border-insets: 0;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+
+/* 彻底清除 TextField 内部默认边框 */
+.search-field-inner *.text,
+.search-field-inner * {
+    -fx-border-width: 0;
+    -fx-border-color: transparent;
 }
 
 /* 搜索框内嵌按钮（刷新、展开、收起） */
@@ -289,14 +328,14 @@
 .toolbar-button {
     -fx-background-color: #FFFFFF;
     -fx-text-fill: #555;
-    -fx-font-size: 13px;
-    -fx-padding: 4 12;
+    -fx-font-size: 12px;
+    -fx-padding: 4 11;
     -fx-background-radius: 5px;
     -fx-border-color: #D0D0D0;
     -fx-border-width: 1;
     -fx-border-radius: 5px;
     -fx-cursor: hand;
-    -fx-pref-height: 28;
+    -fx-pref-height: 30;
 }
 
 .toolbar-button:hover {
@@ -322,7 +361,7 @@
     -fx-border-width: 1;
     -fx-border-radius: 5px;
     -fx-cursor: hand;
-    -fx-pref-height: 28;
+    -fx-pref-height: 30;
     -fx-pref-width: 36;
     -fx-min-width: 36;
     -fx-alignment: CENTER;
@@ -489,9 +528,10 @@
     -fx-text-fill: #333333;
     -fx-prompt-text-fill: #888888;
     -fx-border-color: #CFD8DC;
+    -fx-border-width: 1;
     -fx-border-radius: 5px;
-    -fx-padding: 4 8px;
-    -fx-pref-height: 28;
+    -fx-padding: 4 8;
+    -fx-pref-height: 30;
     -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.05), 3, 0, 0, 1);
 }
 
@@ -521,9 +561,9 @@
 .settings-button {
     -fx-background-color: transparent;
     -fx-cursor: hand;
-    -fx-padding: 3;
-    -fx-pref-width: 30;
-    -fx-pref-height: 28;
+    -fx-padding: 3 4;
+    -fx-pref-width: 32;
+    -fx-pref-height: 30;
     -fx-background-radius: 5px;
     -fx-alignment: CENTER;
 }
@@ -540,7 +580,7 @@
 #wrapButton {
     -fx-background-color: #FFFFFF;
     -fx-text-fill: #555;
-    -fx-padding: 4 12 4 12;
+    -fx-padding: 3 12;
     -fx-background-radius: 5px;
     -fx-border-color: #D0D0D0;
     -fx-border-width: 1;
@@ -561,8 +601,6 @@
     -fx-background-color: #326CE5;
     -fx-text-fill: #FFF;
     -fx-border-color: #326CE5;
-    -fx-background-insets: 0;
-    -fx-border-insets: 0;
 }
 
 #wrapButton:selected:hover {
@@ -573,12 +611,10 @@
 
 #wrapButton:focused {
     -fx-border-color: #D0D0D0;
-    -fx-background-insets: 0;
 }
 
 #wrapButton:selected:focused {
     -fx-border-color: #326CE5;
-    -fx-background-insets: 0;
 }
 
 .label-tab {
@@ -632,7 +668,42 @@
     -fx-background-color: #ffffff;
     -fx-border-radius: 10;
     -fx-background-radius: 10;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.2), 10, 0, 0, 3);
+}
+
+/* 弹窗底部按钮 — 覆盖 Modena 默认样式 */
+.dialog-pane > .button-bar > .container > .button {
+    -fx-background-color: #FFFFFF;
+    -fx-text-fill: #555;
+    -fx-font-size: 12px;
+    -fx-padding: 5 18;
+    -fx-background-radius: 5px;
+    -fx-border-color: #D0D0D0;
+    -fx-border-width: 1;
+    -fx-border-radius: 5px;
+    -fx-cursor: hand;
+}
+
+.dialog-pane > .button-bar > .container > .button:hover {
+    -fx-background-color: #326CE5;
+    -fx-text-fill: #FFF;
+    -fx-border-color: #326CE5;
+}
+
+.dialog-pane > .button-bar > .container > .button.default {
+    -fx-background-color: #326CE5;
+    -fx-text-fill: #FFFFFF;
+    -fx-border-color: transparent;
+}
+
+.dialog-pane > .button-bar > .container > .button.default:hover {
+    -fx-background-color: #255AB2;
+}
+
+/* 弹窗内内容区按钮（浏览等）— 同样覆盖默认 */
+.dialog-pane .profile-browse-btn,
+.dialog-pane .profile-card-delete-btn,
+.dialog-pane .profile-add-row-btn {
+    -fx-background-insets: 0;
 }
 
 /* ==================== 右键菜单 ==================== */
@@ -658,4 +729,601 @@
 
 .context-menu .menu-item:hover .label {
     -fx-text-fill: #326CE5;
+}
+
+/* ==================== 配置切换 ComboBox ==================== */
+.profile-switch-combo {
+    -fx-background-color: #F5F7FA;
+    -fx-text-fill: #2C3E50;
+    -fx-font-size: 12px;
+    -fx-font-weight: 500;
+    -fx-padding: 1 6 1 8;
+    -fx-background-radius: 6px;
+    -fx-border-color: #E0E3E8;
+    -fx-border-width: 1;
+    -fx-border-radius: 6px;
+    -fx-cursor: hand;
+    -fx-pref-height: 26;
+}
+
+.profile-switch-combo:hover {
+    -fx-background-color: #EBF0FA;
+    -fx-border-color: #B8C7E0;
+}
+
+.profile-switch-combo:focused {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #326CE5;
+    -fx-effect: dropshadow(gaussian, rgba(50,108,229,0.15), 3, 0, 0, 1);
+}
+
+.profile-switch-combo .arrow-button {
+    -fx-background-color: transparent;
+    -fx-padding: 0 3 0 1;
+    -fx-min-width: 14;
+}
+
+.profile-switch-combo .arrow {
+    -fx-background-color: #7B8A9E;
+    -fx-shape: "M0,4 L6,10 L12,4";
+    -fx-pref-size: 12 10;
+    -fx-scale-shape: true;
+}
+
+.profile-switch-combo:hover .arrow {
+    -fx-background-color: #326CE5;
+}
+
+.profile-switch-combo:focused .arrow {
+    -fx-background-color: #326CE5;
+}
+
+/* 下拉列表 Popup（通过 .list-view 嵌套） */
+.profile-switch-combo .list-view {
+    -fx-background-color: #E0E3E8, white;
+    -fx-background-insets: 0, 1;
+    -fx-background-radius: 6px, 5px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 10, 0, 0, 3);
+    -fx-padding: 4 0;
+}
+
+.profile-switch-combo .list-view .list-cell {
+    -fx-font-size: 13px;
+    -fx-text-fill: #2C3E50;
+    -fx-padding: 8 16;
+    -fx-background-color: transparent;
+}
+
+.profile-switch-combo .list-view .list-cell:hover {
+    -fx-background-color: #EBF0FA;
+    -fx-text-fill: #326CE5;
+}
+
+.profile-switch-combo .list-view .list-cell:focused,
+.profile-switch-combo .list-view .list-cell:selected {
+    -fx-background-color: #E8F0FE;
+    -fx-text-fill: #326CE5;
+}
+
+/* ==================== 命名空间选择器（TagInput） ==================== */
+.tag-input-container {
+    -fx-cursor: hand;
+}
+
+/* ===== 输入框本体 — 固定高度单行 ===== */
+.tag-input {
+    -fx-background-color: #F5F7FA;
+    -fx-border-color: #DDE4EB;
+    -fx-border-width: 1;
+    -fx-border-radius: 6px;
+    -fx-background-radius: 6px;
+    -fx-padding: 4 3 2 7;
+    -fx-pref-height: 30;
+    -fx-max-height: 30;
+    -fx-min-height: 30;
+    -fx-pref-width: 250;
+    -fx-max-width: 250;
+    -fx-min-width: 250;
+    -fx-alignment: CENTER_LEFT;
+}
+
+.tag-input:hover {
+    -fx-border-color: #B8C7E0;
+    -fx-background-color: #EDF2FB;
+}
+
+/* 标签行 */
+.tag-input .tag-row {
+    -fx-alignment: CENTER_LEFT;
+    -fx-spacing: 4;
+}
+
+/* "+N" 溢出指示器 */
+.tag-more-label {
+    -fx-text-fill: #FFFFFF;
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-padding: 1 5;
+    -fx-background-color: #8898AA;
+    -fx-background-radius: 8px;
+    -fx-cursor: default;
+    -fx-ellipsis-string: "";
+}
+
+/* 蓝色 + 按钮 */
+.tag-input .add-btn {
+    -fx-min-width: 24;
+    -fx-max-width: 24;
+    -fx-min-height: 24;
+    -fx-max-height: 24;
+    -fx-background-color: #E8F0FE;
+    -fx-background-radius: 12px;
+    -fx-text-fill: #326CE5;
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-padding: 0;
+    -fx-cursor: hand;
+    -fx-border: none;
+}
+
+.tag-input .add-btn:hover {
+    -fx-background-color: #326CE5;
+    -fx-text-fill: #FFFFFF;
+}
+
+.tag-input .add-btn:active,
+.tag-input .add-btn:active {
+    -fx-background-color: #255AB2;
+}
+
+/* chip 标签 */
+.tag-chip-container {
+    -fx-background-color: #E8F0FE;
+    -fx-background-radius: 10px;
+    -fx-padding: 2px 8px 2px 8px;
+    -fx-cursor: default;
+}
+
+.tag-chip-container:hover {
+    -fx-background-color: #D2E3FC;
+}
+
+.tag-chip {
+    -fx-font-size: 10.5px;
+    -fx-text-fill: #326CE5;
+    -fx-font-weight: 500;
+}
+
+.tag-close-btn {
+    -fx-min-size: 14;
+    -fx-max-size: 14;
+    -fx-background-color: transparent;
+    -fx-text-fill: #5C6B7A;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-padding: 2;
+    -fx-cursor: hand;
+}
+
+.tag-close-btn:hover {
+    -fx-text-fill: #FFFFFF;
+    -fx-background-color: #D93025;
+    -fx-background-radius: 8px;
+}
+
+/* 占位文字（无选中时） */
+.tag-input .placeholder {
+    -fx-font-size: 12px;
+    -fx-text-fill: #A0AAB5;
+    -fx-font-style: italic;
+}
+
+/* ===== 命名空间选择弹窗 — 左右双栏 ===== */
+.ns-dialog-root {
+    -fx-background-color: white;
+    -fx-padding: 12 14 8 14;
+}
+
+/* 弹窗工具栏（搜索 + 操作按钮） */
+.ns-dialog-toolbar {
+    -fx-alignment: CENTER_LEFT;
+    -fx-spacing: 8;
+}
+
+.ns-search-box {
+    -fx-background-color: #F5F7FA;
+    -fx-border-color: #DDE4EB;
+    -fx-border-width: 1;
+    -fx-border-radius: 6px;
+    -fx-background-radius: 6px;
+    -fx-alignment: CENTER_LEFT;
+}
+
+.ns-search-field-inner {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-background-insets: 0,0;
+    -fx-background-radius: 0;
+    -fx-padding: 5 6;
+    -fx-font-size: 13px;
+    -fx-pref-height: 30;
+}
+
+.ns-search-field-inner:focused {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+
+.ns-search-refresh-btn {
+    -fx-background-color: transparent;
+    -fx-text-fill: #8898AA;
+    -fx-font-size: 14px;
+    -fx-padding: 0 6;
+    -fx-cursor: hand;
+    -fx-pref-height: 30;
+    -fx-min-height: 30;
+    -fx-min-width: 24;
+}
+.ns-search-refresh-btn:hover { -fx-text-fill: #326CE5; }
+
+/* 全选 / 反选 / 清空 按钮 */
+.ns-select-all-btn,
+.ns-invert-btn,
+.ns-deselect-all-btn {
+    -fx-background-color: #F5F7FA;
+    -fx-text-fill: #326CE5;
+    -fx-font-size: 12px;
+    -fx-padding: 0 12;
+    -fx-pref-height: 30;
+    -fx-min-height: 30;
+    -fx-background-radius: 4px;
+    -fx-cursor: hand;
+    -fx-border-color: transparent;
+}
+.ns-select-all-btn:hover,
+.ns-invert-btn:hover,
+.ns-deselect-all-btn:hover { -fx-background-color: #E8F0FE; }
+
+/* ========== 双栏面板 ========== */
+.ns-dual-panel { -fx-spacing: 0; }
+
+/* 左右列容器 */
+.ns-panel-left,
+.ns-panel-right {
+    -fx-background-color: #F8F9FA;
+    -fx-background-radius: 8px;
+    -fx-border-color: #E2E8F0;
+    -fx-border-width: 1;
+    -fx-border-radius: 8px;
+    -fx-padding: 0;
+}
+
+/* 面板标题 */
+.ns-panel-title {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #5C6B7A;
+    -fx-padding: 6 12;
+    -fx-background-color: rgba(50,108,229,0.04);
+    -fx-background-radius: 8px 8px 0 0;
+}
+
+/* 列表 */
+.ns-list-view {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 4 2 6 2;
+    -fx-border: none;
+}
+
+/* 列表项 */
+.ns-list-view .list-cell,
+.ns-list-item {
+    -fx-text-fill: #333333;
+    -fx-font-size: 13px;
+    -fx-padding: 5 10;
+    -fx-background-color: transparent;
+    -fx-border: none;
+}
+.ns-list-view .list-cell:filled:hover,
+.ns-list-item:filled:hover {
+    -fx-background-color: #E8F0FE;
+    -fx-text-fill: #326CE5;
+}
+.ns-list-view .list-cell:filled:selected,
+.ns-list-item:filled:selected {
+    -fx-background-color: #D2E3FC;
+    -fx-text-fill: #326CE5;
+}
+
+/* 中间移动按钮区域 */
+.ns-move-buttons {
+    -fx-padding: 20 4;
+    -fx-alignment: center;
+}
+
+.ns-move-right-btn,
+.ns-move-left-btn {
+    -fx-min-size: 32;
+    -fx-max-size: 32;
+    -fx-background-color: #FFFFFF;
+    -fx-text-fill: #326CE5;
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 16px;
+    -fx-border-color: #D2E3FC;
+    -fx-border-width: 1;
+    -fx-border-radius: 16px;
+    -fx-cursor: hand;
+}
+.ns-move-right-btn:hover,
+.ns-move-left-btn:hover {
+    -fx-background-color: #326CE5;
+    -fx-text-fill: white;
+    -fx-border-color: #326CE5;
+}
+
+.ns-move-all-btn {
+    -fx-min-size: 28;
+    -fx-max-size: 28;
+    -fx-background-color: transparent;
+    -fx-text-fill: #8898AA;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+    -fx-padding: 2;
+}
+.ns-move-all-btn:hover { -fx-text-fill: #326CE5; }
+
+/* 底部统计 */
+.ns-count-label {
+    -fx-text-fill: #8898AA;
+    -fx-font-size: 11.5px;
+    -fx-padding: 2 4;
+}
+
+/* ==================== 设置面板 ==================== */
+.settings-scroll-pane {
+    -fx-background-color: #f9f9f9;
+    -fx-background-insets: 0;
+}
+.settings-section {
+    -fx-border-color: #E8ECF0;
+    -fx-border-radius: 6px;
+    -fx-padding: 12 16;
+    -fx-background-color: #FFFFFF;
+    -fx-background-radius: 6px;
+}
+
+.settings-section-title {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #2C3E50;
+    -fx-padding: 0 0 10 0;
+}
+
+/* 设置行容器 */
+.settings-rows {
+    -fx-padding: 2 0;
+}
+
+/* 每行设置项 */
+.settings-row {
+    -fx-alignment: CENTER_LEFT;
+    -fx-spacing: 8;
+    -fx-padding: 7 4 7 0;
+}
+
+/* hover 效果在滚动时造成重绘卡顿，已移除 */
+
+/* 删除按钮 — 与 toolbar-button 风格统一 */
+.settings-label {
+    -fx-min-width: 85;
+    -fx-max-width: 85;
+    -fx-font-size: 13px;
+    -fx-text-fill: #444;
+}
+
+/* 输入框 */
+.settings-input,
+.settings-input-small {
+    -fx-background-color: #F5F7FA;
+    -fx-border-color: transparent;
+    -fx-border-radius: 5px;
+    -fx-background-radius: 5px;
+    -fx-padding: 4 8;
+    -fx-font-size: 13px;
+    -fx-pref-height: 30;
+}
+
+.settings-input:focused {
+    -fx-background-color: #FFF;
+    -fx-border-color: #326CE5;
+}
+
+.settings-input-small:focused {
+    -fx-background-color: #FFF;
+    -fx-border-color: #326CE5;
+}
+
+.settings-input-small {
+    -fx-pref-width: 80;
+    -fx-max-width: 80;
+}
+
+/* 单位提示 */
+.settings-hint {
+    -fx-font-size: 12px;
+    -fx-text-fill: #999;
+}
+
+/* 右侧说明文字 */
+.settings-hint-right {
+    -fx-font-size: 11.5px;
+    -fx-text-fill: #B0B8C4;
+    -fx-wrap-text: false;
+}
+
+/* 分隔线 */
+.settings-separator {
+    -fx-padding: 0 0 0 93;
+}
+
+/* 复选框 */
+.settings-checkbox {
+    -fx-cursor: hand;
+    -fx-font-size: 13px;
+    -fx-text-fill: #444;
+}
+.settings-checkbox .box {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #D0D5DD;
+    -fx-border-width: 1.5;
+    -fx-border-radius: 4px;
+    -fx-background-radius: 4px;
+    -fx-padding: 2;
+}
+.settings-checkbox:hover .box {
+    -fx-border-color: #326CE5;
+}
+.settings-checkbox:selected .box {
+    -fx-background-color: #326CE5;
+    -fx-border-color: #326CE5;
+}
+.settings-checkbox:selected .mark {
+    -fx-background-color: #FFFFFF;
+}
+
+/* ==================== 配置卡片列表（替代 TableView） ==================== */
+.profile-card-row {
+    -fx-background-color: #F8FAFC;
+    -fx-border-color: #E2E8F0;
+    -fx-border-width: 1;
+    -fx-border-radius: 6px;
+    -fx-background-radius: 6px;
+    -fx-padding: 7 10;
+    -fx-cursor: hand;
+}
+
+/* hover 移除，避免滚动卡顿 */
+
+/* 删除按钮 — 与 toolbar-button 风格统一 */
+.profile-card-delete-btn {
+    -fx-background-color: #FFFFFF;
+    -fx-text-fill: #999;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-padding: 1 6;
+    -fx-background-radius: 4px;
+    -fx-background-insets: 0;
+    -fx-border-color: #DDE3EA;
+    -fx-border-width: 1;
+    -fx-border-radius: 4px;
+    -fx-border-insets: 0;
+    -fx-cursor: hand;
+    -fx-min-width: 24;
+    -fx-min-height: 22;
+}
+
+.profile-card-delete-btn:hover {
+    -fx-text-fill: #E74C3C;
+}
+
+/* 添加配置按钮 — 半圆角矩形 */
+.profile-add-row-btn {
+    -fx-background-color: #F5F7FA;
+    -fx-text-fill: #326CE5;
+    -fx-font-size: 13px;
+    -fx-font-weight: normal;
+    -fx-padding: 9 0;
+    -fx-background-radius: 6px;
+    -fx-background-insets: 0;
+    -fx-border-color: #DDE4EC;
+    -fx-border-width: 1;
+    -fx-border-radius: 6px;
+    -fx-border-insets: 0;
+    -fx-cursor: hand;
+    -fx-pref-height: 36;
+}
+
+.profile-add-row-btn:hover {
+    -fx-background-color: #EBF2FF;
+    -fx-border-color: #B8C7E0;
+    -fx-text-fill: #255AB2;
+}
+
+/* ==================== 浏览按钮 ==================== */
+.profile-browse-btn {
+    -fx-background-color: #FFFFFF;
+    -fx-text-fill: #326CE5;
+    -fx-font-size: 12px;
+    -fx-padding: 5 14;
+    -fx-background-radius: 5px;
+    -fx-background-insets: 0;
+    -fx-cursor: hand;
+    -fx-border-color: #326CE5;
+    -fx-border-width: 1;
+    -fx-border-radius: 5px;
+    -fx-border-insets: 0;
+}
+
+.profile-browse-btn:hover {
+    -fx-background-color: #E8F0FE;
+}
+
+/* ==================== 配置列表 TableView（保留备用） ==================== */
+.profile-table-view {
+    -fx-border-color: #E0E3E8;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+    -fx-background-color: #FFFFFF;
+}
+
+.profile-table-view .column-header-background {
+    -fx-background-color: #F5F7FA;
+    -fx-background-radius: 7px 7px 0 0;
+    -fx-padding: 2 4 1 4;
+}
+
+.profile-table-view .column-header {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-size: 32;
+    -fx-padding: 6 12 4 12;
+}
+
+.profile-table-view .column-header .label {
+    -fx-font-size: 11.5px;
+    -fx-text-fill: #667788;
+    -fx-font-weight: 600;
+    -fx-text-transform: uppercase;
+}
+
+.profile-table-view .table-cell {
+    -fx-padding: 8 12;
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: transparent;
+    -fx-alignment: CENTER_LEFT;
+}
+
+.profile-table-view .table-row-cell:hover {
+    -fx-background-color: #F5F8FC;
+}
+
+.profile-table-view .table-row-cell:selected {
+    -fx-background-color: #EBF2FF;
+    -fx-background-insets: 0 2 0 2;
+}
+
+.profile-table-view .table-row-cell:selected .table-cell {
+    -fx-text-fill: inherit;
+}
+
+.profile-table-view .table-row-cell {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: transparent;
+    -fx-cell-size: 38;
 }

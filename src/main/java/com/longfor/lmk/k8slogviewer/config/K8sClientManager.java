@@ -75,8 +75,12 @@ public final class K8sClientManager {
             coreV1Api = new CoreV1Api();
         } catch (IOException e) {
             log.error("Failed to load kubeconfig", e);
-            Platform.runLater(() ->
-                    CommonUtils.showAlert("错误", "初始化 Kubernetes 客户端失败，请检查配置文件: " + e.getMessage()));
+            Platform.runLater(() -> {
+                var stage = AppConfig.getMainStage();
+                if (stage != null && stage.getScene() != null) {
+                    CommonUtils.showToast(stage.getScene().getRoot(), "✗", "K8s客户端初始化失败，请检查配置文件", "#E74C3C");
+                }
+            });
         }
     }
 }

@@ -1,14 +1,12 @@
 package com.longfor.lmk.k8slogviewer.controller;
 
-import com.longfor.lmk.k8slogviewer.config.AppConfig;
-import com.longfor.lmk.k8slogviewer.config.AppPreferences;
-import com.longfor.lmk.k8slogviewer.config.K8sQuery;
+import com.longfor.lmk.k8slogviewer.config.*;
 import com.longfor.lmk.k8slogviewer.service.ClusterTreeService;
 import com.longfor.lmk.k8slogviewer.service.LogFetchService;
 import com.longfor.lmk.k8slogviewer.service.PodLogFileManager;
+import com.longfor.lmk.k8slogviewer.utils.CommonUtils;
 import com.longfor.lmk.k8slogviewer.utils.ExecutorManager;
 import com.longfor.lmk.k8slogviewer.utils.LogStyleUtil;
-import javafx.animation.FadeTransition;
 import javafx.animation.PauseTransition;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
@@ -24,7 +22,6 @@ import javafx.scene.image.ImageView;
 import javafx.scene.input.*;
 import javafx.scene.layout.*;
 import javafx.stage.FileChooser;
-import javafx.stage.Popup;
 import javafx.util.Duration;
 import org.fxmisc.flowless.VirtualizedScrollPane;
 import org.fxmisc.richtext.CodeArea;
@@ -35,12 +32,12 @@ import java.awt.*;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-
-import static com.longfor.lmk.k8slogviewer.utils.CommonUtils.showAlert;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * 主界面控制器。
@@ -76,9 +73,13 @@ public class K8sLogViewerController {
     @FXML private VBox treePane;
     @FXML private HBox treePaneWrapper;
     @FXML private ComboBox<String> statusFilterCombo;
+    @FXML private VBox treeLoadingOverlay;
 
     @FXML private Button collapseTab;
     @FXML private SplitPane splitPane;
+    @FXML private ComboBox<KubeConfigProfile> profileSwitchCombo;
+    @FXML private HBox namespaceFilterContainer;
+    private com.longfor.lmk.k8slogviewer.ui.TagInput namespaceTagInput;
 
     @FXML private VBox searchBar;
     @FXML private TextField inlineSearchField;
@@ -98,13 +99,14 @@ public class K8sLogViewerController {
     // ==================== 控制器自有状态 ====================
 
     private boolean isTreePaneVisible = true;
+    private volatile boolean isNsReloading = false;  // 命名空间切换刷新树期间，跳过 Pod 日志查询
     private VirtualizedScrollPane<CodeArea> logScrollPane;
 
     /** 默认分割线位置，与 FXML 中 dividerPositions 一致 */
     private static final double DEFAULT_DIVIDER_POSITION = 0.18;
 
     /** 日志流代际计数器，切换 Pod 时递增以使旧的重连循环失效 */
-    private volatile int logStreamGeneration = 0;
+    private final AtomicInteger logStreamGeneration = new AtomicInteger(0);
 
     /** 最大自动重连次数 */
     private static final int MAX_RECONNECT_ATTEMPTS = 3;
@@ -118,25 +120,54 @@ public class K8sLogViewerController {
     public void initialize() throws IOException {
         log.info("K8s 日志查看器初始化...");
 
+        // 彻底清除搜索输入框的JavaFX默认边框
+        searchField.setStyle(
+            "-fx-background-color: transparent;" +
+            "-fx-border-color: transparent; -fx-border-width: 0;" +
+            "-fx-background-insets: 0,0; -fx-background-radius: 0;" +
+            "-fx-focus-color: transparent; -fx-faint-focus-color: transparent;"
+        );
+
         // 创建管理器
         logStreamManager = new LogStreamManager(logArea, headerArea, fileManager);
+        // 跟滚状态变化时同步按钮文案（向上滚→恢复，回底→暂停）
+        logStreamManager.setOnAutoScrollStateChanged(paused ->
+                searchToggleButton.setText(paused ? "恢复" : "暂停"));
         diskSearchEngine = new DiskSearchEngine(logArea, fileManager, matchCountLabel);
         treeViewManager = new TreeViewManager(treeView, statusFilterCombo, searchField, clusterTreeService);
 
-        Platform.runLater(() -> {
-            boolean ok = AppPreferences.initializeEnvironment();
-            if (!ok) {
-                log.warn("自动检测失败，需要手动配置");
+        // 先加载偏好文件（必须在 init 之前，否则 combo 读到空数据）
+        AppPreferences.loadFromFile();
+        boolean isFirstRun = AppPreferences.isFirstRun();
+        boolean ok = AppPreferences.initializeEnvironment();
+
+        // 首次运行 或 自动检测失败时弹出设置面板
+        if (!ok || isFirstRun) {
+            if (!ok) log.warn("自动检测失败，需要手动配置");
+            else log.info("首次运行，打开设置面板供用户确认配置");
+            // 延迟到 Scene 就绪后再弹窗，避免 initOwner 时 Scene 为 null
+            Platform.runLater(() -> {
+                String prevProfile = AppPreferences.getActiveProfileName();
                 try {
                     new SettingsController().openSettingsDialog();
                 } catch (IOException e) {
-                    showAlert("初始化失败",
-                            "请联系邮箱 <1272837619@qq.com> 解决，或自己调试解决！");
+                    CommonUtils.showToast(settingsButton, "✗", "初始化失败，请联系邮箱解决", "#E74C3C");
+                    return;
                 }
-            }
-        });
+                treeViewManager.reloadAutoRefresh();
+                refreshProfileCombo();
+                if (!Objects.equals(prevProfile, AppPreferences.getActiveProfileName())) {
+                    KubeConfigProfile curProfileObj = AppPreferences.getActiveProfile();
+                    if (curProfileObj != null) {
+                        switchProfile(curProfileObj);
+                    }
+                }
+            });
+        }
 
         initSettingsIcon();
+        initProfileSwitchCombo();
+        initNamespaceFilterCombo();
         initQueryDefaults();
 
         // 初始化 CodeArea（返回 VirtualizedScrollPane，加入布局）
@@ -184,6 +215,8 @@ public class K8sLogViewerController {
 
         // 绑定树选择事件
         treeView.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
+            // 命名空间切换刷新树期间跳过，避免误触发日志查询
+            if (isNsReloading) return;
             if (newVal != null && newVal.getParent() != null) {
                 TreeItem<String> parent = newVal.getParent();
                 if (parent.getParent() != null) {
@@ -210,6 +243,8 @@ public class K8sLogViewerController {
                 }
             }
         });
+
+        loadNamespaceOptions();
     }
 
     private void initSettingsIcon() {
@@ -220,8 +255,320 @@ public class K8sLogViewerController {
             icon.setFitWidth(20);
             settingsButton.setGraphic(icon);
         } catch (Exception e) {
-            Platform.runLater(() -> showAlert("错误", "无法加载设置图标: " + e.getMessage()));
+            Platform.runLater(() -> CommonUtils.showToast(settingsButton, "✗", "无法加载设置图标: " + e.getMessage(), "#E74C3C"));
         }
+    }
+
+    private void initProfileSwitchCombo() {
+        profileSwitchCombo.setCellFactory(lv -> new ListCell<>() {
+            @Override
+            protected void updateItem(KubeConfigProfile item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                    setGraphic(null);
+                    setStyle("");
+                    getStyleClass().removeIf("active-profile-item"::equals);
+                } else {
+                    setText(item.getName());
+                    setGraphic(null);
+                    // 当前激活配置高亮标识
+                    String activeName = AppPreferences.getActiveProfileName();
+                    if (item.getName().equals(activeName)) {
+                        setStyle("-fx-font-weight: bold; -fx-text-fill: #326CE5;");
+                        getStyleClass().add("active-profile-item");
+                    } else {
+                        getStyleClass().removeIf("active-profile-item"::equals);
+                    }
+                }
+            }
+        });
+        profileSwitchCombo.setButtonCell(new ListCell<>() {
+            @Override
+            protected void updateItem(KubeConfigProfile item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? "切换配置" : item.getName());
+            }
+        });
+
+        refreshProfileCombo();
+
+        // 切换配置时不立即触发（避免初始化时触发），用标志位控制
+        profileSwitchCombo.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal != null && oldVal != null && !newVal.getName().equals(oldVal.getName())) {
+                switchProfile(newVal);
+            }
+        });
+    }
+
+    /** 初始化命名空间标签式多选过滤（TagInput 组件） */
+    private void initNamespaceFilterCombo() {
+        namespaceTagInput = new com.longfor.lmk.k8slogviewer.ui.TagInput();
+        namespaceTagInput.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+        HBox.setHgrow(namespaceTagInput, Priority.ALWAYS);
+        namespaceFilterContainer.getChildren().add(namespaceTagInput);
+
+        // 选中变化回调
+        namespaceTagInput.setOnSelectionChanged(selected -> handleNsSelectionChanged());
+
+        // 刷新命名空间回调（弹窗中点击 ⟳ 按钮）
+        namespaceTagInput.setOnRefreshNamespaces(() -> {
+            Platform.runLater(() -> {
+                CommonUtils.showToast(namespaceTagInput, "⟳", "正在加载命名空间...", "#326CE5");
+                fetchNamespacesFromApi(allNs -> {
+                    String activeNs = getActiveNamespace();
+                    if (activeNs != null && !allNs.contains(activeNs)) {
+                        stopCurrentLogStream();
+                    }
+                    var currentSelected = new ArrayList<>(namespaceTagInput.getSelectedItems());
+                    namespaceTagInput.getItems().setAll(allNs);
+                    if (activeNs != null && allNs.contains(activeNs)
+                            && !currentSelected.contains(activeNs)) {
+                        currentSelected.add(0, activeNs);
+                    }
+                    currentSelected.retainAll(allNs);
+                    if (!currentSelected.isEmpty()) {
+                        namespaceTagInput.selectMultiple(currentSelected);
+                    }
+                    CommonUtils.showToast(namespaceTagInput, "✓",
+                            "已刷新，共 " + allNs.size() + " 个命名空间", "#27AE60");
+                }, err ->
+                        CommonUtils.showToast(namespaceTagInput, "✗", "刷新失败: " + err, "#E74C3C")
+                );
+            });
+        });
+    }
+
+    /** 处理命名空间选择变化 */
+    private void handleNsSelectionChanged() {
+        // 如果当前正在跑日志的容器所在命名空间不再被选中，关闭日志流
+        String activeNs = getActiveNamespace();
+        if (activeNs != null && !namespaceTagInput.getSelectedItems().contains(activeNs)) {
+            stopCurrentLogStream();
+        }
+        saveNamespaceSelection();
+        applyNsFilterFromCache();
+    }
+
+    /**
+     * 获取当前正在运行日志的容器所在的命名空间。
+     * 从 activePodPath（格式：root/ns/pod/container）中提取。
+     */
+    private String getActiveNamespace() {
+        String path = treeViewManager.getActivePodPath();
+        if (path == null) return null;
+        String[] parts = path.split("/", -1);
+        // 格式: root/ns/pod/container → ns 在 index 1
+        return parts.length >= 3 ? parts[1] : null;
+    }
+
+    /** 关闭当前日志流并清空状态（不显示结束提示） */
+    private void stopCurrentLogStream() {
+        logStreamGeneration.incrementAndGet();
+        LogFetchService.cancelCurrentCall();
+        ExecutorManager.stopLogFlushExecutor();
+        logStreamManager.resetForNewPod();
+        logStreamManager.clearAreas();
+        AppConfig.getK8sQuery().resetRuntimeState();
+        AppConfig.getK8sQuery().setPodName(null);
+        AppConfig.getK8sQuery().setNamespace(null);
+        treeViewManager.setActivePodPath(null);
+    }
+
+    /** 从 K8s API 加载命名空间列表并恢复选中状态（仅首次或切配置时调用） */
+    private void loadNamespaceOptions() {
+        fetchNamespacesFromApi(allNs -> {
+            namespaceTagInput.getItems().setAll(allNs);
+            restoreNamespaceSelection(allNs);
+        }, err -> CommonUtils.showToast(settingsButton, "✗", "加载命名空间失败: " + err, "#E74C3C"));
+    }
+
+    /**
+     * 从 K8s API 异步加载全量命名空间列表（不再查询全量 Pod）。
+     *
+     * @param onSuccess  加载成功回调（FX 线程），接收 allNs 列表
+     * @param onError    加载失败回调（FX 线程，可为 null 仅打日志）
+     */
+    private void fetchNamespacesFromApi(java.util.function.Consumer<java.util.List<String>> onSuccess,
+                                        java.util.function.Consumer<String> onError) {
+        ExecutorManager.submit(() -> {
+            try {
+                var api = com.longfor.lmk.k8slogviewer.config.K8sClientManager.getCoreV1Api();
+                java.util.List<String> allNs = api.listNamespace(null, null, null, null,
+                        null, null, null, null, null).getItems().stream()
+                        .map(ns -> ns.getMetadata().getName())
+                        .sorted(String.CASE_INSENSITIVE_ORDER)
+                        .toList();
+                Platform.runLater(() -> onSuccess.accept(allNs));
+            } catch (Exception e) {
+                log.warn("加载命名空间列表失败: {}", e.getMessage());
+                if (onError != null) {
+                    Platform.runLater(() -> onError.accept(e.getMessage()));
+                }
+            }
+        });
+    }
+
+    /**
+     * 恢复已保存的命名空间选中状态。
+     * <ul>
+     *   <li>有保存配置 → 直接使用</li>
+     *   <li>无保存配置 → 逐个探测找到第一个有 Pod 的 ns，自动选中并持久化</li>
+     * </ul>
+     */
+    private void restoreNamespaceSelection(java.util.List<String> allNs) {
+        String profileName = AppPreferences.getActiveProfileName();
+        if (profileName == null || allNs.isEmpty()) return;
+        List<String> saved = AppPreferences.getSelectedNamespaces(profileName);
+
+        if (!saved.isEmpty()) {
+            // 有保存配置，直接使用（过滤掉已不存在的命名空间）
+            saved.retainAll(allNs);
+            if (!saved.isEmpty()) {
+                namespaceTagInput.selectMultiple(saved);
+                Platform.runLater(this::applyNsFilterFromCache);
+                return;
+            }
+        }
+
+        // 无有效保存配置：异步逐个探测，找到第一个有 Pod 的命名空间
+        findFirstNamespaceWithPodsAndSelect(allNs);
+    }
+
+    /**
+     * 逐个探测命名空间，找到第一个包含 Pod 的 ns 后选中并保存为默认配置。
+     */
+    private void findFirstNamespaceWithPodsAndSelect(java.util.List<String> allNs) {
+        ExecutorManager.submit(() -> {
+            for (String ns : allNs) {
+                try {
+                    var api = com.longfor.lmk.k8slogviewer.config.K8sClientManager.getCoreV1Api();
+                    var pods = api.listNamespacedPod(ns, null, null, null, null,
+                            null, null, null, null, null);
+                    if (pods != null && !pods.getItems().isEmpty()) {
+                        String found = ns;
+                        Platform.runLater(() -> {
+                            namespaceTagInput.selectMultiple(List.of(found));
+                            saveNamespaceSelection();
+                            applyNsFilterFromCache();
+                        });
+                        return;
+                    }
+                } catch (Exception e) {
+                    log.warn("探测命名空间[{}]是否有Pod失败: {}", ns, e.getMessage());
+                }
+            }
+            // 所有命名空间都没有 Pod，选中第一个作为兜底
+            if (!allNs.isEmpty()) {
+                String first = allNs.get(0);
+                Platform.runLater(() -> {
+                    namespaceTagInput.selectMultiple(List.of(first));
+                    CommonUtils.showToast(namespaceTagInput, "⚠", "未找到包含 Pod 的命名空间", "#F39C12");
+                });
+            }
+        });
+    }
+
+    /** 保存当前选中的命名空间到偏好设置 */
+    private void saveNamespaceSelection() {
+        String profileName = AppPreferences.getActiveProfileName();
+        if (profileName != null) {
+            AppPreferences.setSelectedNamespaces(profileName,
+                    new ArrayList<>(namespaceTagInput.getSelectedItems()));
+        }
+    }
+
+    /**
+     * 根据当前选中命名空间加载树并展示。
+     */
+    private void applyNsFilterFromCache() {
+        reloadTreeWithApiCall();
+    }
+
+    /**
+     * 根据当前选中命名空间全量加载树（含所有 Pod 子节点，不懒加载）。
+     */
+    private void reloadTreeWithApiCall() {
+        List<String> nsList = getEffectiveNamespaces();
+        if (nsList.isEmpty()) return;
+
+        isNsReloading = true;
+        refreshButton.setDisable(true);
+        treeViewManager.cancelPendingFilters();
+        searchField.setText("");
+        treeViewManager.clearStatusFilter();
+        loadingIndicator.setVisible(true);
+        treeLoadingOverlay.setVisible(true);
+
+        ExecutorManager.submit(() -> {
+            try {
+                // 先设置 lastRequestedNamespaces（forceReloadFull 依赖此字段）
+                clusterTreeService.loadForNamespaces(nsList);
+                // 全量加载所有 Pod
+                TreeItem<String> fullRoot = clusterTreeService.forceReloadFull();
+                Platform.runLater(() -> {
+                    if (fullRoot != null) {
+                        treeViewManager.setRootDirectly(fullRoot);
+                        // 如果有正在跑日志的容器且其命名空间仍在选中列表中，自动定位到该 Pod
+                        String activePath = treeViewManager.getActivePodPath();
+                        String activeNs = getActiveNamespace();
+                        if (activePath != null && activeNs != null
+                                && namespaceTagInput.getSelectedItems().contains(activeNs)) {
+                            treeViewManager.locateAndExpandToPath(activePath);
+                        }
+                    }
+                    treeLoadingOverlay.setVisible(false);
+                    loadingIndicator.setVisible(false);
+                    refreshButton.setDisable(false);
+                    isNsReloading = false;
+                });
+            } catch (Exception e) {
+                log.error("加载集群数据失败: {}", e.getMessage());
+                Platform.runLater(() -> {
+                    treeLoadingOverlay.setVisible(false);
+                    loadingIndicator.setVisible(false);
+                    refreshButton.setDisable(false);
+                    isNsReloading = false;
+                    CommonUtils.showToast(refreshButton, "✗", "加载数据失败: " + e.getMessage(), "#E74C3C");
+                });
+            }
+        });
+    }
+
+    /**
+     * 获取实际生效的命名空间列表（始终非空）。
+     */
+    private List<String> getEffectiveNamespaces() {
+        var checked = namespaceTagInput.getSelectedItems();
+        return new ArrayList<>(checked);
+    }
+    public void refreshProfileCombo() {
+        KubeConfigProfile current = AppPreferences.getActiveProfile();
+        profileSwitchCombo.getItems().setAll(AppPreferences.getKubeConfigProfiles());
+        if (current != null) {
+            for (KubeConfigProfile p : profileSwitchCombo.getItems()) {
+                if (current.getName().equals(p.getName())) {
+                    profileSwitchCombo.getSelectionModel().select(p);
+                    break;
+                }
+            }
+        }
+    }
+
+    /** 切换 KubeConfig 配置 */
+    private void switchProfile(KubeConfigProfile profile) {
+        AppPreferences.setActiveProfileName(profile.getName());
+        K8sClientManager.reset();
+        clusterTreeService.clearNsCache();
+
+        // 关闭当前日志流
+        stopCurrentLogStream();
+
+        // 静默清空（不触发中间状态的 UI 重建，避免闪烁）
+        namespaceTagInput.resetSilent();
+        loadNamespaceOptions();
+
+        reloadTreeWithApiCall();
     }
 
     private void initQueryDefaults() {
@@ -261,8 +608,7 @@ public class K8sLogViewerController {
         searchToggleButton.setText("暂停");
 
         // 递增代际，使旧 Pod 的重连循环失效
-        logStreamGeneration++;
-        int generation = logStreamGeneration;
+        int generation = logStreamGeneration.incrementAndGet();
 
         logStreamManager.resetForNewPod();
 
@@ -286,7 +632,7 @@ public class K8sLogViewerController {
             try {
                 LogFetchService.fetchStreaming(logStreamManager::enqueueLine);
                 // 流正常结束 — 仅当代际匹配时才处理（否则是切换容器导致的取消）
-                if (generation != logStreamGeneration) {
+                if (generation != logStreamGeneration.get()) {
                     log.info("日志流因切换容器而取消，静默退出");
                     return;
                 }
@@ -295,7 +641,7 @@ public class K8sLogViewerController {
                     Platform.runLater(() -> {
                         PauseTransition delay = new PauseTransition(Duration.seconds(1));
                         delay.setOnFinished(e -> {
-                            if (generation == logStreamGeneration) {
+                            if (generation == logStreamGeneration.get()) {
                                 reconnectLogStream(generation, MAX_RECONNECT_ATTEMPTS);
                             }
                         });
@@ -306,14 +652,14 @@ public class K8sLogViewerController {
                     Platform.runLater(this::onLogStreamEnded);
                 }
             } catch (IOException e) {
-                if (generation != logStreamGeneration) {
+                if (generation != logStreamGeneration.get()) {
                     log.info("日志流因切换容器而取消，静默退出");
                     return;
                 }
                 log.error("获取日志失败: {}", e.getMessage());
                 Platform.runLater(() -> {
                     onLogStreamEnded();
-                    showAlert("错误", "无法获取日志: " + e.getMessage());
+                    CommonUtils.showToast(searchBar, "✗", "无法获取日志: " + e.getMessage(), "#E74C3C");
                 });
             }
         });
@@ -321,7 +667,7 @@ public class K8sLogViewerController {
 
     /** 重连日志流（不清理已有日志，不重置状态） */
     private void reconnectLogStream(int expectedGeneration, int remainingAttempts) {
-        if (expectedGeneration != logStreamGeneration) return;
+        if (expectedGeneration != logStreamGeneration.get()) return;
 
         K8sQuery query = AppConfig.getK8sQuery();
         if (!query.isSearchRunning() || query.getPodName() == null) return;
@@ -331,7 +677,7 @@ public class K8sLogViewerController {
         ExecutorManager.submit(() -> {
             try {
                 LogFetchService.fetchStreaming(logStreamManager::enqueueLine, false);
-                if (expectedGeneration != logStreamGeneration) {
+                if (expectedGeneration != logStreamGeneration.get()) {
                     log.info("重连的日志流因切换容器而取消，静默退出");
                     return;
                 }
@@ -352,7 +698,7 @@ public class K8sLogViewerController {
                     Platform.runLater(this::onLogStreamEnded);
                 }
             } catch (IOException e) {
-                if (expectedGeneration != logStreamGeneration) {
+                if (expectedGeneration != logStreamGeneration.get()) {
                     log.info("重连的日志流因切换容器而取消，静默退出");
                     return;
                 }
@@ -485,6 +831,7 @@ public class K8sLogViewerController {
                 });
             }
         });
+
     }
 
     private boolean isTagExists(String keyword) {
@@ -544,33 +891,7 @@ public class K8sLogViewerController {
     }
 
     private void showAutoHideToast(Node anchor) {
-        Popup toast = new Popup();
-        toast.setAutoFix(true);
-
-        Label check = new Label("✓");
-        check.setStyle("-fx-text-fill: white; -fx-font-size: 11px; -fx-font-weight: bold; -fx-background-color: #4caf50; -fx-background-radius: 10; -fx-alignment: center; -fx-pref-width: 20; -fx-pref-height: 20;");
-        Label text = new Label("复制成功");
-        text.setStyle("-fx-text-fill: #333; -fx-font-size: 13px;");
-        HBox box = new HBox(8, check, text);
-        box.setStyle("-fx-background-color: white; -fx-padding: 8 18; -fx-background-radius: 6; -fx-alignment: center; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 8, 0, 0, 2);");
-        toast.getContent().add(box);
-
-        var stage = anchor.getScene().getWindow();
-        toast.show(stage);
-        Platform.runLater(() -> {
-            toast.setX(stage.getX() + (stage.getWidth() - box.getWidth()) / 2);
-            toast.setY(stage.getY() + 40);
-        });
-
-        PauseTransition wait = new PauseTransition(Duration.millis(500));
-        wait.setOnFinished(e -> {
-            FadeTransition fade = new FadeTransition(Duration.millis(500), box);
-            fade.setFromValue(1.0);
-            fade.setToValue(0.0);
-            fade.setOnFinished(ev -> toast.hide());
-            fade.play();
-        });
-        wait.play();
+        CommonUtils.showToast(anchor, "✓", "复制成功", "#4caf50");
     }
 
     private String buildSearchKeywordFromTags() {
@@ -641,11 +962,22 @@ public class K8sLogViewerController {
     @FXML
     public void handleOpenSettings(MouseEvent mouseEvent) {
         try {
+            String prevProfile = AppPreferences.getActiveProfileName();
             new SettingsController().openSettingsDialog();
             // 设置保存后刷新自动刷新配置
             treeViewManager.reloadAutoRefresh();
+            // 刷新工具栏配置下拉列表
+            refreshProfileCombo();
+            // 配置切换时复用 switchProfile 统一处理
+            String curProfile = AppPreferences.getActiveProfileName();
+            if (!Objects.equals(prevProfile, curProfile)) {
+                KubeConfigProfile curProfileObj = AppPreferences.getActiveProfile();
+                if (curProfileObj != null) {
+                    switchProfile(curProfileObj);
+                }
+            }
         } catch (IOException e) {
-            Platform.runLater(() -> showAlert("错误", "无法加载设置窗口: " + e.getMessage()));
+            Platform.runLater(() -> CommonUtils.showToast(settingsButton, "✗", "无法加载设置窗口: " + e.getMessage(), "#E74C3C"));
         }
     }
 
@@ -677,40 +1009,27 @@ public class K8sLogViewerController {
     @FXML
     public void searchToggleClick(MouseEvent mouseEvent) {
         K8sQuery k8sQuery = AppConfig.getK8sQuery();
-        boolean searchRunning = !k8sQuery.isSearchRunning();
-        k8sQuery.setSearchRunning(searchRunning);
-        searchToggleButton.setText(searchRunning ? "暂停" : "恢复");
 
-        if (searchRunning) {
+        // 当前显示"恢复" → 全部恢复：日志流 + 跟滚 + 置底
+        if (!k8sQuery.isSearchRunning() || logStreamManager.isAutoScrollPaused()) {
+            k8sQuery.setSearchRunning(true);
+            logStreamManager.resumeAutoScroll();   // 触发回调改按钮文案为"暂停"
             logStreamManager.resumeAndCatchUp();
-            // 恢复后重新高亮搜索关键字并更新匹配列表
             String searchKw = (searchBar != null && searchBar.isVisible()) ? buildSearchKeywordFromTags() : null;
             if (searchKw != null && !searchKw.isBlank()) {
                 diskSearchEngine.rehighlightLogArea(searchKw);
                 diskSearchEngine.searchDiskInBackground(searchKw, false);
             }
+            return;
         }
+
+        // 当前显示"暂停" → 暂停跟滚（日志继续追加到 UI，用户可上下查看）
+        logStreamManager.pauseAutoScroll();       // 触发回调改按钮文案为"恢复"
     }
 
     @FXML
     public void refreshOnClick(MouseEvent mouseEvent) {
-        refreshButton.setDisable(true);
-        loadingIndicator.setVisible(true);
-
-        ExecutorManager.submit(() -> {
-            try {
-                clusterTreeService.clearCache();
-                // 在后台线程加载数据（K8s API 调用），避免阻塞 FX 线程
-                TreeItem<String> rootItem = clusterTreeService.getRootItem();
-                Platform.runLater(() -> treeViewManager.applyTreeFilter(rootItem));
-            } catch (Exception e) {
-                log.error("刷新失败: {}", e.getMessage());
-            }
-            Platform.runLater(() -> {
-                refreshButton.setDisable(false);
-                loadingIndicator.setVisible(false);
-            });
-        });
+        reloadTreeWithApiCall();
     }
 
     @FXML
@@ -786,8 +1105,7 @@ public class K8sLogViewerController {
     public void scrollToTopClick(MouseEvent mouseEvent) {
         K8sQuery k8sQuery = AppConfig.getK8sQuery();
         if (k8sQuery.isSearchRunning()) {
-            k8sQuery.setSearchRunning(false);
-            searchToggleButton.setText("恢复");
+            logStreamManager.pauseAutoScroll();   // 触发回调改按钮文案为"恢复"
         }
         logStreamManager.scrollToTop(k8sQuery.getPodName());
     }
@@ -795,10 +1113,8 @@ public class K8sLogViewerController {
     @FXML
     public void scrollToBottomClick(MouseEvent mouseEvent) {
         K8sQuery k8sQuery = AppConfig.getK8sQuery();
-        if (!k8sQuery.isSearchRunning()) {
-            k8sQuery.setSearchRunning(true);
-            searchToggleButton.setText("暂停");
-        }
+        k8sQuery.setSearchRunning(true);
+        logStreamManager.resumeAutoScroll();   // 触发回调改按钮文案为"暂停"
         logStreamManager.scrollToBottom(k8sQuery.getPodName());
     }
 
@@ -806,13 +1122,13 @@ public class K8sLogViewerController {
     public void openLogFileClick(MouseEvent mouseEvent) {
         String podName = AppConfig.getK8sQuery().getPodName();
         if (podName == null) {
-            showAlert("提示", "请先选择一个 Pod");
+            CommonUtils.showToast(openLogFileButton, "⚠", "请先选择一个 Pod", "#F39C12");
             return;
         }
 
         java.nio.file.Path logFile = fileManager.getLatestLogFile(podName);
         if (logFile == null || !Files.exists(logFile)) {
-            showAlert("提示", "当前没有日志文件");
+            CommonUtils.showToast(openLogFileButton, "⚠", "当前没有日志文件", "#F39C12");
             return;
         }
 
@@ -843,7 +1159,7 @@ public class K8sLogViewerController {
             new ProcessBuilder(selected.getAbsolutePath(), file.getAbsolutePath()).start();
         } catch (IOException ex) {
             log.error("用所选程序打开日志文件失败: {}", ex.getMessage());
-            showAlert("错误", "无法用所选程序打开日志文件: " + ex.getMessage());
+            CommonUtils.showToast(openLogFileButton, "✗", "无法用所选程序打开日志文件: " + ex.getMessage(), "#E74C3C");
         }
     }
 }

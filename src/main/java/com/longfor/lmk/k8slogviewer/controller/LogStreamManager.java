@@ -65,6 +65,42 @@ public class LogStreamManager {
     private volatile boolean loadingHistory = false;
     private long lastSearchRefreshTime = 0;
 
+    // ==================== 自动滚动控制 ====================
+
+    /** true = 用户点"暂停"后停止跟滚；false = 跟随最新日志 */
+    private volatile boolean autoScrollPaused = false;
+
+    /** 跟滚状态变化回调（通知 Controller 更新按钮文案） */
+    private java.util.function.Consumer<Boolean> onAutoScrollStateChanged;
+
+    public void setOnAutoScrollStateChanged(java.util.function.Consumer<Boolean> callback) {
+        this.onAutoScrollStateChanged = callback;
+    }
+
+    /** 恢复自动跟滚（用户点"恢复"时调用） */
+    public void resumeAutoScroll() {
+        setAutoScrollPaused(false);
+    }
+
+    /** 暂停自动跟滚（用户点"暂停"按钮时调用） */
+    public void pauseAutoScroll() {
+        setAutoScrollPaused(true);
+    }
+
+    /** 当前是否处于暂停跟滚状态 */
+    public boolean isAutoScrollPaused() {
+        return autoScrollPaused;
+    }
+
+    private void setAutoScrollPaused(boolean paused) {
+        if (autoScrollPaused != paused) {
+            autoScrollPaused = paused;
+            if (onAutoScrollStateChanged != null) {
+                onAutoScrollStateChanged.accept(paused);
+            }
+        }
+    }
+
     // ==================== 回调 ====================
 
     /** 日志裁剪后通知搜索引擎同步调整匹配行号 */
@@ -161,6 +197,7 @@ public class LogStreamManager {
 
     /** 切换 Pod 时重置视图行号追踪和缓冲 */
     public void resetForNewPod() {
+        resumeAutoScroll();
         viewStartLine = 0;
         viewEndLine = 0;
         diskEndLine = 0;
@@ -214,9 +251,8 @@ public class LogStreamManager {
             LogStyleUtil.appendHeaderLine(headerArea, line);
         }
 
-        // 暂停时不追加到 UI，但持续追踪磁盘行号
-        boolean searchRunning = k8sQuery.isSearchRunning();
-        if (!searchRunning || logLines.isEmpty()) {
+        // 用户手动暂停时不追加日志到 UI（仍写入磁盘）
+        if (autoScrollPaused || logLines.isEmpty()) {
             if (!logLines.isEmpty()) {
                 diskEndLine += logLines.size();
             }
@@ -231,9 +267,11 @@ public class LogStreamManager {
         // 裁剪旧行
         trimLogArea();
 
-        // 滚动到底部
-        logArea.moveTo(logArea.getLength());
-        logArea.requestFollowCaret();
+        // 自动跟滚
+        if (!autoScrollPaused) {
+            logArea.moveTo(logArea.getLength());
+            logArea.requestFollowCaret();
+        }
 
         return logLines;
     }
@@ -378,6 +416,7 @@ public class LogStreamManager {
 
     /** 恢复滚动时，把暂停期间积压在磁盘但未显示的日志补回到 UI */
     public void resumeAndCatchUp() {
+        resumeAutoScroll();
         String podName = AppConfig.getK8sQuery().getPodName();
         if (podName == null) return;
 
@@ -430,6 +469,7 @@ public class LogStreamManager {
 
     /** 置底：跳转到磁盘文件最后一行 */
     public void scrollToBottom(String podName) {
+        resumeAutoScroll();
         if (podName == null) return;
 
         loadingHistory = true;

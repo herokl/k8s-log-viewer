@@ -6,50 +6,73 @@
             xmlns:fx="http://javafx.com/fxml/1">
 
     <content>
-        <VBox spacing="20" style="-fx-background-color: #f9f9f9;">
-            <!-- Kubeconfig 路径 -->
-            <HBox spacing="15" alignment="CENTER_LEFT">
-                <Label text="Kubeconfig 路径：" minWidth="100"/>
-                <TextField fx:id="kubeConfigPathField" HBox.hgrow="ALWAYS" promptText="请选择 Kubeconfig 文件路径"/>
-                <Button text="选择" onAction="#onBrowseKubeconfig" style="-fx-min-width: 70px;"/>
-            </HBox>
+        <ScrollPane fx:id="settingsScrollPane" hbarPolicy="NEVER" styleClass="settings-scroll-pane">
+        <VBox spacing="14" style="-fx-background-color: #f9f9f9;">
 
-            <!-- 日志保留天数 -->
-            <HBox spacing="15" alignment="CENTER_LEFT">
-                <Label text="日志保留天数：" minWidth="100"/>
-                <TextField fx:id="logRetentionDaysField" prefWidth="80" promptText="天"/>
-                <Label text="天（超过自动删除过期日志）" style="-fx-text-fill: gray;"/>
-            </HBox>
+            <!-- ===== KubeConfig 配置管理 ===== -->
+            <VBox spacing="4" styleClass="settings-section">
+                <Label text="KubeConfig 配置" styleClass="settings-section-title"/>
+                <VBox fx:id="profileCardContainer" spacing="3"/>
+                <HBox alignment="CENTER" style="-fx-padding: 4 0 0 0;" HBox.hgrow="ALWAYS">
+                    <Button text="+ 新增" onAction="#onAddProfile" styleClass="profile-add-row-btn" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                </HBox>
+            </VBox>
 
-            <!-- 最大日志容量 -->
-            <HBox spacing="15" alignment="CENTER_LEFT">
-                <Label text="最大日志容量：" minWidth="100"/>
-                <TextField fx:id="maxLogSizeField" prefWidth="80" promptText="MB"/>
-                <Label text="MB（单个日志文件超过自动截断）" style="-fx-text-fill: gray;"/>
-            </HBox>
+            <!-- ===== 日志设置 ===== -->
+            <VBox spacing="2" styleClass="settings-section">
+                <Label text="日志设置" styleClass="settings-section-title"/>
+                <VBox spacing="0" styleClass="settings-rows">
+                    <HBox styleClass="settings-row">
+                        <Label text="保留天数" styleClass="settings-label"/>
+                        <TextField fx:id="logRetentionDaysField" prefWidth="80" promptText="天" styleClass="settings-input"/>
+                        <Label text="天" styleClass="settings-hint"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Label text="超过自动删除过期日志" styleClass="settings-hint-right"/>
+                    </HBox>
+                    <Separator styleClass="settings-separator"/>
+                    <HBox styleClass="settings-row">
+                        <Label text="最大容量" styleClass="settings-label"/>
+                        <TextField fx:id="maxLogSizeField" prefWidth="80" promptText="MB" styleClass="settings-input"/>
+                        <Label text="MB" styleClass="settings-hint"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Label text="单个日志文件超过自动截断" styleClass="settings-hint-right"/>
+                    </HBox>
+                    <Separator styleClass="settings-separator"/>
+                    <HBox styleClass="settings-row">
+                        <Label text="刷新间隔" styleClass="settings-label"/>
+                        <TextField fx:id="logFlushIntervalField" prefWidth="80" promptText="ms" styleClass="settings-input"/>
+                        <Label text="ms" styleClass="settings-hint"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Label text="日志刷新到UI的间隔，默认50" styleClass="settings-hint-right"/>
+                    </HBox>
+                </VBox>
+            </VBox>
 
-            <!-- 日志刷新间隔 -->
-            <HBox spacing="15" alignment="CENTER_LEFT">
-                <Label text="刷新间隔：" minWidth="100"/>
-                <TextField fx:id="logFlushIntervalField" prefWidth="80" promptText="ms"/>
-                <Label text="ms（日志刷新到UI的间隔，10~1000，默认50）" style="-fx-text-fill: gray;"/>
-            </HBox>
+            <!-- ===== 界面与搜索 ===== -->
+            <VBox spacing="2" styleClass="settings-section">
+                <Label text="界面与搜索" styleClass="settings-section-title"/>
+                <VBox spacing="0" styleClass="settings-rows">
+                    <HBox styleClass="settings-row">
+                        <Label text="搜索刷新" styleClass="settings-label"/>
+                        <TextField fx:id="searchRefreshIntervalField" prefWidth="80" promptText="ms" styleClass="settings-input"/>
+                        <Label text="ms" styleClass="settings-hint"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Label text="右侧面板匹配数更新间隔，默认1000" styleClass="settings-hint-right"/>
+                    </HBox>
+                    <Separator styleClass="settings-separator"/>
+                    <HBox styleClass="settings-row">
+                        <Label text="自动刷新树" styleClass="settings-label"/>
+                        <TextField fx:id="treeAutoRefreshIntervalField" prefWidth="80" promptText="秒" styleClass="settings-input-small"/>
+                        <Label text="秒" styleClass="settings-hint"/>
+                        <CheckBox fx:id="treeAutoRefreshCheckBox" styleClass="settings-checkbox"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Label text="容器树自动刷新间隔，默认10秒" styleClass="settings-hint-right"/>
+                    </HBox>
+                </VBox>
+            </VBox>
 
-            <!-- 搜索刷新间隔 -->
-            <HBox spacing="15" alignment="CENTER_LEFT">
-                <Label text="搜索刷新(右侧面板)：" minWidth="100"/>
-                <TextField fx:id="searchRefreshIntervalField" prefWidth="80" promptText="ms"/>
-                <Label text="ms（搜索匹配数更新间隔，100~5000，默认1000）" style="-fx-text-fill: gray;"/>
-            </HBox>
-
-            <!-- 容器树自动刷新 -->
-            <HBox spacing="15" alignment="CENTER_LEFT">
-                <Label text="自动刷新树：" minWidth="100"/>
-                <CheckBox fx:id="treeAutoRefreshCheckBox"/>
-                <TextField fx:id="treeAutoRefreshIntervalField" prefWidth="80" promptText="秒"/>
-                <Label text="秒（容器树自动刷新间隔，1~300，默认10）" style="-fx-text-fill: gray;"/>
-            </HBox>
         </VBox>
+        </ScrollPane>
     </content>
 
     <buttonTypes>

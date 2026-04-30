@@ -39,3 +39,4 @@ build/
 .idea/
 /target/
 /logs/
+/config/

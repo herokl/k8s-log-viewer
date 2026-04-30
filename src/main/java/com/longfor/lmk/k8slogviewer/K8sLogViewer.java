@@ -23,13 +23,18 @@ public class K8sLogViewer extends Application {
 
         AppConfig.setMainStage(primaryStage);
         primaryStage.setOnCloseRequest(event -> {
-            // 关闭时清理过期日志
-            LogCleaner.cleanExpiredLogs();
-            // 关闭时清理所有历史日志，仅保留每个 Pod 最新一份
-            new PodLogFileManager().cleanAllButLatest();
-            ExecutorManager.shutdownAll();
-            Platform.exit();
-            System.exit(0);
+            // 1. 先隐藏窗口（UI 立即消失）
+            event.consume();
+            primaryStage.hide();
+
+            // 2. 后台线程执行清理，完成后退出
+            new Thread(() -> {
+                LogCleaner.cleanExpiredLogs();
+                new PodLogFileManager().cleanAllButLatest();
+                ExecutorManager.shutdownAll();
+                Platform.exit();
+                System.exit(0);
+            }, "shutdown-cleanup").start();
         });
 
         // 加载 FXML 文件

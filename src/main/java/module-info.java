@@ -20,6 +20,9 @@ module com.longfor.lmk.k8slogviewer {
     exports com.longfor.lmk.k8slogviewer;
     exports com.longfor.lmk.k8slogviewer.controller to javafx.fxml;
     exports com.longfor.lmk.k8slogviewer.model;
+    exports com.longfor.lmk.k8slogviewer.config;
 
+    opens com.longfor.lmk.k8slogviewer.ui to javafx.fxml;
     opens com.longfor.lmk.k8slogviewer.controller to javafx.fxml;
+    opens com.longfor.lmk.k8slogviewer.config to com.google.gson;
 }

@@ -35,7 +35,13 @@
                         <ProgressIndicator fx:id="loadingIndicator" visible="false" maxWidth="18" maxHeight="18"/>
                     </HBox>
 
-                    <TreeView fx:id="treeView" styleClass="tree-view" VBox.vgrow="ALWAYS"/>
+                    <StackPane VBox.vgrow="ALWAYS">
+                        <TreeView fx:id="treeView" styleClass="tree-view"/>
+                        <VBox fx:id="treeLoadingOverlay" styleClass="tree-loading-overlay" visible="false" mouseTransparent="false">
+                            <ProgressIndicator maxWidth="32" maxHeight="32" styleClass="tree-loading-spinner"/>
+                            <Label text="加载中..." styleClass="tree-loading-label"/>
+                        </VBox>
+                    </StackPane>
                 </VBox>
 
             </HBox>
@@ -78,6 +84,8 @@
                         <ToggleButton fx:id="wrapButton" styleClass="toolbar-button"
                                       onAction="#onWrapToggle"/>
                         <Region HBox.hgrow="ALWAYS"/>
+                        <ComboBox fx:id="profileSwitchCombo" promptText="切换配置" prefWidth="100" styleClass="profile-switch-combo"/>
+                        <HBox fx:id="namespaceFilterContainer" styleClass="tag-input-container"/>
                         <Button fx:id="settingsButton" onMouseClicked="#handleOpenSettings"
                                 styleClass="settings-button"/>
                     </HBox>

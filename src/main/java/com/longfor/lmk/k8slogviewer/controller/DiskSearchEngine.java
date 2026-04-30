@@ -15,10 +15,7 @@ import org.fxmisc.richtext.model.StyleSpansBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Supplier;
 
 /**
@@ -49,6 +46,9 @@ public class DiskSearchEngine {
     private int currentDiskMatchIndex = -1;
     private String lastKeyword = "";
     private boolean searchAndMode = false;
+
+    /** 后台搜索代际，用于取消过时的搜索结果 */
+    private volatile long searchGeneration = 0;
 
     // ==================== 视图状态供应商（由 Controller 注入） ====================
 
@@ -120,6 +120,9 @@ public class DiskSearchEngine {
         String podName = AppConfig.getK8sQuery().getPodName();
         if (podName == null) return;
 
+        // 递增代际，使之前未完成的后台搜索结果作废
+        long gen = ++searchGeneration;
+
         int currentMatchLine = (currentDiskMatchIndex >= 0 && currentDiskMatchIndex < diskMatchLineNumbers.size())
                 ? diskMatchLineNumbers.get(currentDiskMatchIndex) : -1;
 
@@ -127,10 +130,8 @@ public class DiskSearchEngine {
             PodLogFileManager.DiskSearchResult result = fileManager.searchInLogFile(podName, keyword, searchAndMode);
 
             Platform.runLater(() -> {
-                // 防御：全量搜索返回 0 但之前有匹配，可能是并发读到了截断中的空文件
-                if (result.matchedLineNumbers.isEmpty() && !diskMatchLineNumbers.isEmpty()) {
-                    return;
-                }
+                // 代际不匹配说明已有更新的搜索任务，丢弃此结果
+                if (gen != searchGeneration) return;
 
                 diskMatchLineNumbers.clear();
                 diskMatchLineNumbers.addAll(result.matchedLineNumbers);
@@ -148,10 +149,13 @@ public class DiskSearchEngine {
                 }
 
                 updateMatchLabel();
-                rehighlightLogArea(keyword);
 
                 if (navigateToFirst && !diskMatchLineNumbers.isEmpty()) {
+                    rehighlightLogArea(keyword);
                     navigateToDiskMatch();
+                } else {
+                    // 非导航模式：仅刷新当前匹配行的高亮，不重算全文样式也不移动光标
+                    applyCurrentMatchHighlight();
                 }
             });
         });
@@ -337,7 +341,12 @@ public class DiskSearchEngine {
                 matches = keywords.stream().anyMatch(kw -> line.toLowerCase().contains(kw.toLowerCase()));
             }
             if (matches) {
-                diskMatchLineNumbers.add(startDiskLine + i);
+                int newLine = startDiskLine + i;
+                // 去重：避免与全量搜索结果重复
+                int insertPos = Collections.binarySearch(diskMatchLineNumbers, newLine);
+                if (insertPos < 0) {
+                    diskMatchLineNumbers.add(~insertPos, newLine);
+                }
             }
         }
 
