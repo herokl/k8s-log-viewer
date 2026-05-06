@@ -17,6 +17,9 @@
         <slf4j.version>1.7.36</slf4j.version>
         <logback.version>1.2.11</logback.version>
         <ikonli.version>12.5.0</ikonli.version>
+        <!-- 日志配置: 本地默认 debug+追加, GitHub Actions 打包时通过 -D 覆盖为 info+覆盖 -->
+        <LOG_LEVEL>debug</LOG_LEVEL>
+        <FILE_APPEND>true</FILE_APPEND>
     </properties>
 
     <dependencies>
@@ -128,6 +131,22 @@
 
     <build>
         <finalName>k8s-log-viewer-1.0</finalName>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+                <includes>
+                    <include>logback.xml</include>
+                </includes>
+            </resource>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>false</filtering>
+                <excludes>
+                    <exclude>logback.xml</exclude>
+                </excludes>
+            </resource>
+        </resources>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
