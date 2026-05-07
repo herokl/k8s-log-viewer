@@ -16,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 
 /**
@@ -48,7 +49,7 @@ public class DiskSearchEngine {
     private boolean searchAndMode = false;
 
     /** 后台搜索代际，用于取消过时的搜索结果 */
-    private volatile long searchGeneration = 0;
+    private final AtomicLong searchGeneration = new AtomicLong(0);
 
     // ==================== 视图状态供应商（由 Controller 注入） ====================
 
@@ -95,17 +96,18 @@ public class DiskSearchEngine {
 
     /** 搜索磁盘日志文件 */
     public void searchDiskInBackground(String keyword, boolean navigateToFirst) {
-        searchDiskInBackground(keyword, navigateToFirst, false);
+        searchDiskInBackground(keyword, navigateToFirst, false, true);
     }
 
     /**
      * 在磁盘文件中搜索关键字（后台线程），完成后更新匹配列表和 UI。
      *
-     * @param keyword         搜索关键字
-     * @param navigateToFirst 是否跳转到第一个匹配
-     * @param force           强制搜索，即使关键字未变化也执行（定时刷新时为 true）
+     * @param keyword               搜索关键字
+     * @param navigateToFirst       是否跳转到第一个匹配
+     * @param force                 强制搜索，即使关键字未变化也执行（定时刷新时为 true）
+     * @param incrementGeneration   是否递增搜索代际（定时刷新传 false 以避免冲掉用户导航）
      */
-    public void searchDiskInBackground(String keyword, boolean navigateToFirst, boolean force) {
+    public void searchDiskInBackground(String keyword, boolean navigateToFirst, boolean force, boolean incrementGeneration) {
         if (keyword == null || keyword.isBlank()) {
             diskMatchLineNumbers.clear();
             currentDiskMatchIndex = -1;
@@ -121,7 +123,8 @@ public class DiskSearchEngine {
         if (podName == null) return;
 
         // 递增代际，使之前未完成的后台搜索结果作废
-        long gen = ++searchGeneration;
+        // 定时刷新不递增，避免冲掉用户主动搜索的导航
+        long gen = incrementGeneration ? searchGeneration.incrementAndGet() : searchGeneration.get();
 
         int currentMatchLine = (currentDiskMatchIndex >= 0 && currentDiskMatchIndex < diskMatchLineNumbers.size())
                 ? diskMatchLineNumbers.get(currentDiskMatchIndex) : -1;
@@ -131,7 +134,7 @@ public class DiskSearchEngine {
 
             Platform.runLater(() -> {
                 // 代际不匹配说明已有更新的搜索任务，丢弃此结果
-                if (gen != searchGeneration) return;
+                if (gen != searchGeneration.get()) return;
 
                 diskMatchLineNumbers.clear();
                 diskMatchLineNumbers.addAll(result.matchedLineNumbers);
@@ -164,6 +167,7 @@ public class DiskSearchEngine {
     /** 跳转到下一个匹配 */
     public void findNext() {
         if (diskMatchLineNumbers.isEmpty()) return;
+        searchGeneration.incrementAndGet();  // 使进行中的后台搜索结果失效，防止回调覆盖当前导航
         currentDiskMatchIndex = (currentDiskMatchIndex + 1) % diskMatchLineNumbers.size();
         navigateToDiskMatch();
     }
@@ -171,8 +175,27 @@ public class DiskSearchEngine {
     /** 跳转到上一个匹配 */
     public void findPrev() {
         if (diskMatchLineNumbers.isEmpty()) return;
+        searchGeneration.incrementAndGet();  // 使进行中的后台搜索结果失效，防止回调覆盖当前导航
         currentDiskMatchIndex = (currentDiskMatchIndex - 1 + diskMatchLineNumbers.size()) % diskMatchLineNumbers.size();
         navigateToDiskMatch();
+    }
+
+    /** 跳转到指定索引的匹配项（1-based，用户输入） */
+    public void navigateToMatchIndex(int index) {
+        if (diskMatchLineNumbers.isEmpty()) return;
+        if (index < 1 || index > diskMatchLineNumbers.size()) return;
+        currentDiskMatchIndex = index - 1;
+        navigateToDiskMatch();
+    }
+
+    /** 获取当前匹配索引（0-based） */
+    public int getCurrentMatchIndex() {
+        return currentDiskMatchIndex;
+    }
+
+    /** 获取匹配总数 */
+    public int getMatchCount() {
+        return diskMatchLineNumbers.size();
     }
 
     /**
@@ -330,6 +353,10 @@ public class DiskSearchEngine {
         List<String> keywords = CommonUtils.parseSearchKeywords(keyword);
         if (keywords.isEmpty()) return;
 
+        // 记住当前匹配行号，插入后据此修正索引偏移
+        int currentLine = (currentDiskMatchIndex >= 0 && currentDiskMatchIndex < diskMatchLineNumbers.size())
+                ? diskMatchLineNumbers.get(currentDiskMatchIndex) : -1;
+
         int startDiskLine = diskEndLine - newLines.size();
 
         for (int i = 0; i < newLines.size(); i++) {
@@ -349,7 +376,11 @@ public class DiskSearchEngine {
                 }
             }
         }
-
+        // 修正 currentDiskMatchIndex，确保仍指向同一匹配行
+        if (currentLine >= 0 && !diskMatchLineNumbers.isEmpty()) {
+            int idx = diskMatchLineNumbers.indexOf(currentLine);
+            currentDiskMatchIndex = idx >= 0 ? idx : Math.min(currentDiskMatchIndex, diskMatchLineNumbers.size() - 1);
+        }
         updateMatchLabel();
     }
 
@@ -404,6 +435,7 @@ public class DiskSearchEngine {
 
     /** 关闭搜索时清除全部搜索状态 */
     public void clearSearch() {
+        searchGeneration.incrementAndGet();  // 使进行中的后台搜索结果失效
         diskMatchLineNumbers.clear();
         currentDiskMatchIndex = -1;
         lastKeyword = "";

@@ -60,10 +60,10 @@
                         <Button text="+" styleClass="search-add-button" onAction="#onSearchAdd"/>
                         <ToggleButton fx:id="andOrToggle" text="或" styleClass="toolbar-button"
                                       onAction="#onAndOrToggle"/>
-                        <Button text="◀" styleClass="search-nav-button" onAction="#findPrev"/>
-                        <Button text="▶" styleClass="search-nav-button" onAction="#findNext"/>
+                        <Button fx:id="findPrevButton" styleClass="search-nav-button" onAction="#findPrev"/>
+                        <Button fx:id="findNextButton" styleClass="search-nav-button" onAction="#findNext"/>
                         <Label fx:id="matchCountLabel" text="0/0" styleClass="search-match-label"/>
-                        <Button text="✕" styleClass="search-close-button" onAction="#closeSearch"/>
+                        <Button fx:id="searchCloseButton" styleClass="search-close-button" onAction="#closeSearch"/>
                     </HBox>
                     <FlowPane fx:id="tagContainer" hgap="6" vgap="4" styleClass="search-tags-row"/>
                 </VBox>

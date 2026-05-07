@@ -14,6 +14,7 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.control.Button;
+import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
@@ -69,6 +70,9 @@ public class K8sLogViewerController {
     @FXML private Button scrollToTopButton;
     @FXML private Button scrollToBottomButton;
     @FXML private Button openLogFileButton;
+    @FXML private Button findPrevButton;
+    @FXML private Button findNextButton;
+    @FXML private Button searchCloseButton;
     @FXML private ToggleButton wrapButton;
     @FXML private VBox treePane;
     @FXML private HBox treePaneWrapper;
@@ -756,12 +760,14 @@ public class K8sLogViewerController {
             });
         }
 
-        // 按配置的时间间隔全量搜索一次，保证匹配列表完整
-        long now = System.currentTimeMillis();
-        int searchRefreshMs = AppPreferences.getSearchRefreshIntervalMs();
-        if (now - logStreamManager.getLastSearchRefreshTime() >= searchRefreshMs) {
-            logStreamManager.setLastSearchRefreshTime(now);
-            Platform.runLater(this::refreshSearchIfNeeded);
+        String refreshKw = (searchBar != null && searchBar.isVisible()) ? buildSearchKeywordFromTags() : null;
+        if (refreshKw != null && !refreshKw.isBlank()) {
+            long now = System.currentTimeMillis();
+            int searchRefreshMs = AppPreferences.getSearchRefreshIntervalMs();
+            if (now - logStreamManager.getLastSearchRefreshTime() >= searchRefreshMs) {
+                logStreamManager.setLastSearchRefreshTime(now);
+                Platform.runLater(this::refreshSearchIfNeeded);
+            }
         }
     }
 
@@ -769,7 +775,8 @@ public class K8sLogViewerController {
     private void refreshSearchIfNeeded() {
         String searchKw = (searchBar != null && searchBar.isVisible()) ? buildSearchKeywordFromTags() : null;
         if (searchKw != null && !searchKw.isBlank()) {
-            diskSearchEngine.searchDiskInBackground(searchKw, false, true);
+            // incrementGeneration=false：定时刷新不递增代际，避免冲掉用户主动搜索的跳转导航
+            diskSearchEngine.searchDiskInBackground(searchKw, false, true, false);
         }
     }
 
@@ -783,9 +790,80 @@ public class K8sLogViewerController {
                 diskSearchEngine.findNext();
                 return;
             }
-            addSearchTag(text);
+            if (!isTagExists(text)) {
+                addSearchTag(text);
+            }
             inlineSearchField.clear();
             onSearchTagsChanged();
+        });
+
+        // 匹配计数标签点击跳转到指定匹配项
+        matchCountLabel.setOnMouseClicked(e -> {
+            if (diskSearchEngine.getMatchCount() <= 0) return;
+
+            // 自定义弹窗，保持与其他弹窗风格一致
+            Dialog<ButtonType> dialog = new Dialog<>();
+            dialog.setTitle("跳转到匹配项");
+            dialog.initOwner(AppConfig.getMainStage());
+
+            VBox content = new VBox(16);
+            content.setStyle("-fx-background-color: #f9f9f9; -fx-padding: 20;");
+
+            Label title = new Label("跳转到匹配项");
+            title.setStyle("-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #2C3E50;");
+
+            VBox fieldBox = new VBox(10);
+            fieldBox.setStyle("-fx-border-color: #ddd; -fx-border-radius: 6; -fx-padding: 14; -fx-background-color: #fff; -fx-background-radius: 6;");
+
+            HBox row = new HBox(10);
+            row.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+            Label label = new Label("匹配序号：");
+            label.setMinWidth(80);
+            label.setStyle("-fx-font-size: 13px;");
+            TextField inputField = new TextField(String.valueOf(diskSearchEngine.getCurrentMatchIndex() + 1));
+            inputField.setPromptText("1-" + diskSearchEngine.getMatchCount());
+            inputField.setPrefWidth(120);
+            inputField.setStyle("-fx-font-size: 13px;");
+            Label hint = new Label();
+            hint.setStyle("-fx-font-size: 12px; -fx-text-fill: #999;");
+            hint.textProperty().bind(javafx.beans.binding.Bindings.createStringBinding(
+                    () -> "(共 " + diskSearchEngine.getMatchCount() + " 项)",
+                    matchCountLabel.textProperty()));
+            row.getChildren().addAll(label, inputField, hint);
+            fieldBox.getChildren().add(row);
+
+            content.getChildren().addAll(title, fieldBox);
+
+            dialog.getDialogPane().setContent(content);
+            dialog.getDialogPane().getStylesheets().add(
+                    Objects.requireNonNull(getClass().getResource("/styles.css")).toExternalForm());
+
+            ButtonType jumpBtn = new ButtonType("跳转", ButtonBar.ButtonData.OK_DONE);
+            ButtonType cancelBtn = new ButtonType("取消", ButtonBar.ButtonData.CANCEL_CLOSE);
+            dialog.getDialogPane().getButtonTypes().addAll(jumpBtn, cancelBtn);
+
+            // 输入校验：非数字或超出范围时阻止关闭
+            dialog.getDialogPane().lookupButton(jumpBtn).addEventFilter(
+                    javafx.event.ActionEvent.ACTION, event -> {
+                        try {
+                            int idx = Integer.parseInt(inputField.getText().trim());
+                            if (idx < 1 || idx > diskSearchEngine.getMatchCount()) {
+                                event.consume();
+                            }
+                        } catch (NumberFormatException ex) {
+                            event.consume();
+                        }
+                    });
+
+            dialog.showAndWait().ifPresent(btn -> {
+                if (btn.getButtonData() == ButtonBar.ButtonData.OK_DONE) {
+                    try {
+                        int idx = Integer.parseInt(inputField.getText().trim());
+                        diskSearchEngine.navigateToMatchIndex(idx);
+                    } catch (NumberFormatException ignored) {
+                    }
+                }
+            });
         });
 
         // 搜索框内上下方向键导航匹配
@@ -831,6 +909,9 @@ public class K8sLogViewerController {
                 });
             }
         });
+
+        // 按钮图标
+        initButtonIcons();
 
     }
 
@@ -898,7 +979,7 @@ public class K8sLogViewerController {
         if (tagContainer.getChildren().isEmpty()) return "";
         StringBuilder sb = new StringBuilder();
         for (var node : tagContainer.getChildren()) {
-            String kw = (String) ((HBox) node).getUserData();
+            String kw = (String) node.getUserData();
             sb.append(kw).append('\0');
         }
         return sb.toString();
@@ -1004,6 +1085,38 @@ public class K8sLogViewerController {
         icon.setScaleY(1.1);
         icon.fillProperty().bind(wrapButton.textFillProperty());
         wrapButton.setGraphic(icon);
+    }
+
+    private void initButtonIcons() {
+        // 搜索栏导航按钮图标（纯图标，无文字）
+        setSvgIcon(findPrevButton, "M10.5 2.75a.75.75 0 0 0-1.28-.53l-5.25 5.25a.75.75 0 0 0 0 1.06l5.25 5.25a.75.75 0 1 0 1.06-1.06L6.06 8l4.22-4.22a.75.75 0 0 0 .22-.53");
+        setSvgIcon(findNextButton, "M3.75 2.75a.75.75 0 0 1 1.28-.53l5.25 5.25a.75.75 0 0 1 0 1.06l-5.25 5.25a.75.75 0 1 1-1.06-1.06L8.19 8 3.97 3.78a.75.75 0 0 1-.22-.53");
+        setSvgIcon(searchCloseButton, "M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22");
+
+        // 工具栏按钮图标（图标+文字）
+        setSvgIconWithText(scrollToTopButton, "M3 2a.75.75 0 0 0 0 1.5h8a.75.75 0 0 0 0-1.5H3Zm.53 4.97a.75.75 0 0 0 1.06-1.06l2.97-2.97 2.97 2.97a.75.75 0 1 0 1.06-1.06L7.53 2.78a.75.75 0 0 0-1.06 0L3.53 5.91a.75.75 0 0 0 0 1.06ZM7 8a.75.75 0 0 1 .75.75v4.5a.75.75 0 0 1-1.5 0v-4.5A.75.75 0 0 1 7 8Z");
+        setSvgIconWithText(scrollToBottomButton, "M3 12.5a.75.75 0 0 0 0 1.5h8a.75.75 0 0 0 0-1.5H3Zm.53-4.97a.75.75 0 0 1 1.06 1.06l2.97 2.97 2.97-2.97a.75.75 0 1 1 1.06 1.06L7.53 11.72a.75.75 0 0 1-1.06 0L3.53 8.59a.75.75 0 0 1 0-1.06ZM7 3a.75.75 0 0 1 .75.75v4.5a.75.75 0 0 1-1.5 0v-4.5A.75.75 0 0 1 7 3Z");
+        setSvgIconWithText(openLogFileButton, "M4 2a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V6.414a1.5 1.5 0 0 0-.44-1.06L9.647 2.44A1.5 1.5 0 0 0 8.586 2H4Zm0 1.5h4.586a.5.5 0 0 1 .354.146L12.44 7.06a.5.5 0 0 1 .146.354V12a.5.5 0 0 1-.5.5H4a.5.5 0 0 1-.5-.5V4a.5.5 0 0 1 .5-.5Zm2 4.25a.75.75 0 0 0 0 1.5h4a.75.75 0 0 0 0-1.5H6Zm0 3a.75.75 0 0 0 0 1.5h4a.75.75 0 0 0 0-1.5H6Z");
+    }
+
+    private void setSvgIcon(ButtonBase button, String svgPath) {
+        javafx.scene.shape.SVGPath icon = new javafx.scene.shape.SVGPath();
+        icon.setContent(svgPath);
+        icon.setScaleX(0.9);
+        icon.setScaleY(0.9);
+        icon.fillProperty().bind(button.textFillProperty());
+        button.setGraphic(icon);
+        button.setText(null);
+    }
+
+    private void setSvgIconWithText(ButtonBase button, String svgPath) {
+        javafx.scene.shape.SVGPath icon = new javafx.scene.shape.SVGPath();
+        icon.setContent(svgPath);
+        icon.setScaleX(0.75);
+        icon.setScaleY(0.75);
+        icon.fillProperty().bind(button.textFillProperty());
+        button.setGraphic(icon);
+        // 保留文字，图标在文字左侧
     }
 
     @FXML

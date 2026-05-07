@@ -444,6 +444,12 @@
     -fx-font-size: 11px;
     -fx-padding: 0 4;
     -fx-alignment: CENTER_RIGHT;
+    -fx-cursor: hand;
+}
+
+.search-match-label:hover {
+    -fx-text-fill: #326CE5;
+    -fx-underline: true;
 }
 
 .search-close-button {
