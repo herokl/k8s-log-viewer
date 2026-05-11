@@ -136,12 +136,16 @@ public class LogStreamManager {
         logScrollPane.setHbarPolicy(javafx.scene.control.ScrollPane.ScrollBarPolicy.NEVER);
         VBox.setVgrow(scrollPane, Priority.ALWAYS);
 
-        // 滚动到顶部/底部时自动加载历史
+        // 滚动到顶部/底部时自动加载历史（双向虚拟窗口，暂停也生效）
         scrollPane.estimatedScrollYProperty().addListener((obs, oldVal, newVal) -> {
-            if (!loadingHistory && newVal != null && newVal <= 5.0) {
+            if (loadingHistory) return;
+
+            // 向上滚到顶部 → 加载更早的历史
+            if (newVal != null && newVal <= 5.0) {
                 loadHistoryFromDisk();
             }
-            if (!loadingHistory && newVal != null) {
+            // 向下滚到底部 → 加载更新的日志
+            if (newVal != null) {
                 double totalHeight = logArea.getTotalHeightEstimate();
                 double viewportHeight = scrollPane.getHeight();
                 double maxScroll = totalHeight - viewportHeight;
@@ -279,14 +283,16 @@ public class LogStreamManager {
     /**
      * 裁剪旧行，始终保持 UI 在 MAX_LOG_LINES 以内。
      * 裁剪后通过 onTrimmed 回调通知搜索引擎同步调整。
+     *
+     * @return 实际裁剪的段落数
      */
-    private void trimLogArea() {
+    private int trimLogArea() {
         int paragraphCount = logArea.getParagraphs().size();
         if (paragraphCount <= MAX_LOG_LINES) {
             viewStartLine = viewEndLine - paragraphCount;
             if (viewStartLine < 0) viewStartLine = 0;
             refreshLineNumbers();
-            return;
+            return 0;
         }
 
         int removeCount = Math.min(paragraphCount - MAX_LOG_LINES + (MAX_LOG_LINES / 10), paragraphCount);
@@ -306,6 +312,7 @@ public class LogStreamManager {
         }
 
         refreshLineNumbers();
+        return removeCount;
     }
 
     // ==================== 历史加载 ====================
@@ -316,9 +323,12 @@ public class LogStreamManager {
         if (podName == null || loadingHistory) return;
         if (viewStartLine <= 0) return;
 
+        // 暂停时每次只加载少量行，配合 VS 自身的 scrollY 保持实现无感
+        int maxCount = autoScrollPaused ? 50 : HISTORY_LOAD_LINES;
+
         loadingHistory = true;
         com.longfor.lmk.k8slogviewer.utils.ExecutorManager.submit(() -> {
-            int count = Math.min(HISTORY_LOAD_LINES, viewStartLine);
+            int count = Math.min(maxCount, viewStartLine);
             int startLine = viewStartLine - count;
             List<String> historyLines = fileManager.readLogLines(podName, startLine, count);
 
@@ -328,15 +338,10 @@ public class LogStreamManager {
             }
 
             Platform.runLater(() -> {
-                double scrollX = logScrollPane.getEstimatedScrollX();
-                double scrollY = logScrollPane.getEstimatedScrollY();
-
+                // 小批量 prepend，VS 自动保持 scrollY 像素值 ≈ 无感
                 LogStyleUtil.prependBatch(logArea, historyLines, null);
                 viewStartLine -= historyLines.size();
                 refreshLineNumbers();
-
-                logScrollPane.estimatedScrollXProperty().setValue(scrollX);
-                logScrollPane.estimatedScrollYProperty().setValue(scrollY);
 
                 loadingHistory = false;
             });
@@ -349,9 +354,12 @@ public class LogStreamManager {
         if (podName == null || loadingHistory) return;
         if (diskEndLine <= viewEndLine) return;
 
+        // 暂停时每次只加载少量行，实现无感渐进加载
+        int maxCount = autoScrollPaused ? 50 : HISTORY_LOAD_LINES;
+
         loadingHistory = true;
         com.longfor.lmk.k8slogviewer.utils.ExecutorManager.submit(() -> {
-            int count = Math.min(HISTORY_LOAD_LINES, diskEndLine - viewEndLine);
+            int count = Math.min(maxCount, diskEndLine - viewEndLine);
             List<String> forwardLines = fileManager.readLogLines(podName, viewEndLine, count);
 
             if (forwardLines.isEmpty()) {
@@ -360,16 +368,11 @@ public class LogStreamManager {
             }
 
             Platform.runLater(() -> {
-                double scrollX = logScrollPane.getEstimatedScrollX();
-                double scrollY = logScrollPane.getEstimatedScrollY();
-
+                // 小批量 append + trim（50行通常不会触发trim），VS 保持 scrollY ≈ 无感
                 LogStyleUtil.appendBatch(logArea, forwardLines, null);
                 viewEndLine += forwardLines.size();
                 trimLogArea();
                 refreshLineNumbers();
-
-                logScrollPane.estimatedScrollXProperty().setValue(scrollX);
-                logScrollPane.estimatedScrollYProperty().setValue(scrollY);
 
                 loadingHistory = false;
             });
