@@ -253,8 +253,8 @@ public class K8sLogViewerController {
 
     private void initSettingsIcon() {
         try {
-            ImageView icon = new ImageView(new Image(Objects.requireNonNull(
-                    getClass().getResourceAsStream("/com/longfor/lmk/k8slogviewer/icons/settings.png"))));
+            String iconUrl = getClass().getResource("/com/longfor/lmk/k8slogviewer/icons/settings.png").toExternalForm();
+            ImageView icon = new ImageView(new Image(iconUrl, true));
             icon.setFitHeight(20);
             icon.setFitWidth(20);
             settingsButton.setGraphic(icon);

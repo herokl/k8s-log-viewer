@@ -13,8 +13,6 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import org.fxmisc.flowless.VirtualizedScrollPane;
 import org.fxmisc.richtext.CodeArea;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -38,19 +36,20 @@ import static com.longfor.lmk.k8slogviewer.utils.LogStyleUtil.SEPARATOR_LINE;
  */
 public class LogStreamManager {
 
-    private static final Logger log = LoggerFactory.getLogger(LogStreamManager.class);
-
     /** UI 最大保持行数 */
     private static final int MAX_LOG_LINES = 500;
-    /** 每次从磁盘加载的行数 */
+    /** 非暂停状态每次从磁盘加载的行数 */
     private static final int HISTORY_LOAD_LINES = 1000;
+    /** 暂停状态每次从磁盘加载的行数（小批量保证无感） */
+    private static final int PAUSED_LOAD_LINES = 50;
+    /** 首次打开/置顶置底时的初始渲染行数（避免一次 500 行卡顿） */
+    private static final int INITIAL_RENDER_LINES = 100;
 
     // ==================== UI 引用 ====================
 
     private final CodeArea logArea;
     private final CodeArea headerArea;
     private final PodLogFileManager fileManager;
-    private VirtualizedScrollPane<CodeArea> logScrollPane;
 
     // ==================== 日志缓冲 ====================
 
@@ -132,8 +131,7 @@ public class LogStreamManager {
         logArea.setWrapText(true);
 
         VirtualizedScrollPane<CodeArea> scrollPane = new VirtualizedScrollPane<>(logArea);
-        logScrollPane = scrollPane;
-        logScrollPane.setHbarPolicy(javafx.scene.control.ScrollPane.ScrollBarPolicy.NEVER);
+        scrollPane.setHbarPolicy(javafx.scene.control.ScrollPane.ScrollBarPolicy.NEVER);
         VBox.setVgrow(scrollPane, Priority.ALWAYS);
 
         // 滚动到顶部/底部时自动加载历史（双向虚拟窗口，暂停也生效）
@@ -324,7 +322,7 @@ public class LogStreamManager {
         if (viewStartLine <= 0) return;
 
         // 暂停时每次只加载少量行，配合 VS 自身的 scrollY 保持实现无感
-        int maxCount = autoScrollPaused ? 50 : HISTORY_LOAD_LINES;
+        int maxCount = autoScrollPaused ? PAUSED_LOAD_LINES : HISTORY_LOAD_LINES;
 
         loadingHistory = true;
         com.longfor.lmk.k8slogviewer.utils.ExecutorManager.submit(() -> {
@@ -355,7 +353,7 @@ public class LogStreamManager {
         if (diskEndLine <= viewEndLine) return;
 
         // 暂停时每次只加载少量行，实现无感渐进加载
-        int maxCount = autoScrollPaused ? 50 : HISTORY_LOAD_LINES;
+        int maxCount = autoScrollPaused ? PAUSED_LOAD_LINES : HISTORY_LOAD_LINES;
 
         loadingHistory = true;
         com.longfor.lmk.k8slogviewer.utils.ExecutorManager.submit(() -> {
@@ -390,26 +388,42 @@ public class LogStreamManager {
 
         int half = MAX_LOG_LINES / 2;
         int startLine = Math.max(0, centerLine - half);
-        int count = MAX_LOG_LINES;
 
         loadingHistory = true;
         com.longfor.lmk.k8slogviewer.utils.ExecutorManager.submit(() -> {
-            List<String> lines = fileManager.readLogLines(podName, startLine, count);
-            if (lines.isEmpty()) {
+            List<String> allLines = fileManager.readLogLines(podName, startLine, MAX_LOG_LINES);
+            if (allLines.isEmpty()) {
                 loadingHistory = false;
                 return;
             }
 
+            // 分批渲染：先显示 INITIAL_RENDER_LINES 行快速响应
+            int initialEnd = Math.min(INITIAL_RENDER_LINES, allLines.size());
+            List<String> initialBatch = allLines.subList(0, initialEnd);
+
             Platform.runLater(() -> {
                 LogStyleUtil.clear(logArea);
-                LogStyleUtil.appendBatch(logArea, lines, null);
+                LogStyleUtil.appendBatch(logArea, initialBatch, null);
                 viewStartLine = startLine;
-                viewEndLine = startLine + lines.size();
+                viewEndLine = startLine + initialEnd;
                 refreshLineNumbers();
                 loadingHistory = false;
 
+                // 通知回调（搜索跳转到目标位置）
                 if (onLoaded != null) {
                     onLoaded.run();
+                }
+
+                // 后台静默补齐剩余行
+                if (initialEnd < allLines.size()) {
+                    List<String> remaining = allLines.subList(initialEnd, allLines.size());
+                    com.longfor.lmk.k8slogviewer.utils.ExecutorManager.submit(() ->
+                            Platform.runLater(() -> {
+                                LogStyleUtil.appendBatch(logArea, remaining, null);
+                                viewEndLine = startLine + allLines.size();
+                                refreshLineNumbers();
+                            })
+                    );
                 }
             });
         });
@@ -448,8 +462,8 @@ public class LogStreamManager {
 
         loadingHistory = true;
         com.longfor.lmk.k8slogviewer.utils.ExecutorManager.submit(() -> {
-            List<String> lines = fileManager.readLogLines(podName, 0, MAX_LOG_LINES);
-            if (lines.isEmpty()) {
+            List<String> allLines = fileManager.readLogLines(podName, 0, MAX_LOG_LINES);
+            if (allLines.isEmpty()) {
                 Platform.runLater(() -> {
                     loadingHistory = false;
                     logArea.moveTo(0, 0);
@@ -457,15 +471,31 @@ public class LogStreamManager {
                 return;
             }
 
+            // 分批渲染：先显示前 INITIAL_RENDER_LINES 行快速响应
+            int initialEnd = Math.min(INITIAL_RENDER_LINES, allLines.size());
+            List<String> initialBatch = allLines.subList(0, initialEnd);
+
             Platform.runLater(() -> {
                 LogStyleUtil.clear(logArea);
-                LogStyleUtil.appendBatch(logArea, lines, null);
+                LogStyleUtil.appendBatch(logArea, initialBatch, null);
                 viewStartLine = 0;
-                viewEndLine = lines.size();
+                viewEndLine = initialEnd;
                 refreshLineNumbers();
                 loadingHistory = false;
                 logArea.moveTo(0, 0);
                 logArea.requestFollowCaret();
+
+                // 后台静默补齐剩余行
+                if (initialEnd < allLines.size()) {
+                    List<String> remaining = allLines.subList(initialEnd, allLines.size());
+                    com.longfor.lmk.k8slogviewer.utils.ExecutorManager.submit(() ->
+                            Platform.runLater(() -> {
+                                LogStyleUtil.appendBatch(logArea, remaining, null);
+                                viewEndLine = allLines.size();
+                                refreshLineNumbers();
+                            })
+                    );
+                }
             });
         });
     }
@@ -488,22 +518,41 @@ public class LogStreamManager {
             }
 
             int startLine = Math.max(0, totalLines - MAX_LOG_LINES);
-            List<String> lines = fileManager.readLogLines(podName, startLine, MAX_LOG_LINES);
-            if (lines.isEmpty()) {
+            List<String> allLines = fileManager.readLogLines(podName, startLine, MAX_LOG_LINES);
+            if (allLines.isEmpty()) {
                 Platform.runLater(() -> loadingHistory = false);
                 return;
             }
 
+            // 分批渲染：先显示最后 INITIAL_RENDER_LINES 行快速响应，再补齐前面
+            int initialStart = Math.max(0, allLines.size() - INITIAL_RENDER_LINES);
+            List<String> initialBatch = allLines.subList(initialStart, allLines.size());
+
             Platform.runLater(() -> {
                 LogStyleUtil.clear(logArea);
-                LogStyleUtil.appendBatch(logArea, lines, null);
-                viewStartLine = startLine;
+                LogStyleUtil.appendBatch(logArea, initialBatch, null);
+                viewStartLine = startLine + initialStart;
                 viewEndLine = totalLines;
                 diskEndLine = Math.max(diskEndLine, totalLines);
                 refreshLineNumbers();
-                loadingHistory = false;
                 logArea.moveTo(logArea.getLength());
                 logArea.requestFollowCaret();
+
+                // 后台静默补齐剩余行
+                if (initialStart > 0) {
+                    List<String> remaining = allLines.subList(0, initialStart);
+                    com.longfor.lmk.k8slogviewer.utils.ExecutorManager.submit(() ->
+                            Platform.runLater(() -> {
+                                // 补插到顶部
+                                LogStyleUtil.prependBatch(logArea, remaining, null);
+                                viewStartLine = startLine;
+                                refreshLineNumbers();
+                                loadingHistory = false;
+                            })
+                    );
+                } else {
+                    loadingHistory = false;
+                }
             });
         });
     }

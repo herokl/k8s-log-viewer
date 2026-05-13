@@ -12,15 +12,11 @@ import javafx.scene.image.Image;
 import javafx.stage.Stage;
 
 import java.io.IOException;
-import java.util.Objects;
 
 public class K8sLogViewer extends Application {
 
     @Override
     public void start(Stage primaryStage) throws IOException {
-        // 启动时清理过期日志
-        LogCleaner.cleanExpiredLogs();
-
         AppConfig.setMainStage(primaryStage);
         primaryStage.setOnCloseRequest(event -> {
             // 1. 先隐藏窗口（UI 立即消失）
@@ -41,11 +37,16 @@ public class K8sLogViewer extends Application {
         FXMLLoader fxmlLoader = new FXMLLoader(K8sLogViewer.class.getResource("/com/longfor/lmk/k8slogviewer/main.fxml"));
         Scene scene = new Scene(fxmlLoader.load(), 1200, 800);
         primaryStage.setTitle("Kubernetes 日志查看器");
-        primaryStage.getIcons().add(new Image(Objects.requireNonNull(
-                K8sLogViewer.class.getResourceAsStream("/com/longfor/lmk/k8slogviewer/icons/k8s.png"))));
         primaryStage.setScene(scene);
 
         primaryStage.show();
+
+        // 加载窗口/任务栏图标（本地小文件，同步加载无感知）
+        String iconUrl = K8sLogViewer.class.getResource("/com/longfor/lmk/k8slogviewer/icons/k8s.png").toExternalForm();
+        primaryStage.getIcons().add(new Image(iconUrl));
+
+        // 启动后后台清理过期日志（不阻塞 UI 显示）
+        ExecutorManager.submit(LogCleaner::cleanExpiredLogs);
     }
 
     public static void main(String[] args) {
