@@ -397,33 +397,48 @@ public class LogStreamManager {
                 return;
             }
 
-            // 分批渲染：先显示 INITIAL_RENDER_LINES 行快速响应
-            int initialEnd = Math.min(INITIAL_RENDER_LINES, allLines.size());
-            List<String> initialBatch = allLines.subList(0, initialEnd);
+            // 初始渲染窗口：确保包含目标行（搜索跳转场景下目标行可能在中间位置）
+            int offsetInLoaded = centerLine - startLine;
+            int renderStart = Math.max(0, offsetInLoaded - INITIAL_RENDER_LINES / 2);
+            int renderEnd = Math.min(allLines.size(), renderStart + INITIAL_RENDER_LINES);
+            List<String> initialBatch = allLines.subList(renderStart, renderEnd);
 
             Platform.runLater(() -> {
                 LogStyleUtil.clear(logArea);
                 LogStyleUtil.appendBatch(logArea, initialBatch, null);
-                viewStartLine = startLine;
-                viewEndLine = startLine + initialEnd;
+                viewStartLine = startLine + renderStart;
+                viewEndLine = startLine + renderEnd;
                 refreshLineNumbers();
-                loadingHistory = false;
 
-                // 通知回调（搜索跳转到目标位置）
+                // 通知回调（搜索跳转到目标位置）：先完成高亮和定位
                 if (onLoaded != null) {
                     onLoaded.run();
                 }
 
-                // 后台静默补齐剩余行
-                if (initialEnd < allLines.size()) {
-                    List<String> remaining = allLines.subList(initialEnd, allLines.size());
+                // 后台静默补齐剩余行（先补前面 prepend，再补后面 append）
+                if (renderStart > 0 || renderEnd < allLines.size()) {
                     com.longfor.lmk.k8slogviewer.utils.ExecutorManager.submit(() ->
                             Platform.runLater(() -> {
-                                LogStyleUtil.appendBatch(logArea, remaining, null);
-                                viewEndLine = startLine + allLines.size();
+                                // 补前面
+                                if (renderStart > 0) {
+                                    List<String> front = allLines.subList(0, renderStart);
+                                    LogStyleUtil.prependBatch(logArea, front, null);
+                                    viewStartLine = startLine;
+                                }
+                                // 补后面
+                                if (renderEnd < allLines.size()) {
+                                    List<String> tail = allLines.subList(renderEnd, allLines.size());
+                                    LogStyleUtil.appendBatch(logArea, tail, null);
+                                    viewEndLine = startLine + allLines.size();
+                                }
                                 refreshLineNumbers();
+
+                                // 补齐完成后重新应用搜索高亮（prepend/append 改变了内容和偏移）
+                                loadingHistory = false;
                             })
                     );
+                } else {
+                    loadingHistory = false;
                 }
             });
         });

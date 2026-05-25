@@ -24,8 +24,8 @@ public final class AppPreferences {
 
     private static final Logger log = LoggerFactory.getLogger(AppPreferences.class);
 
-    /** 偏好设置文件路径：项目目录下 config/prefs.json */
-    private static final Path PREFS_PATH = Paths.get("config", "prefs.json");
+    /** 偏好设置文件路径：用户主目录下 .k8s-log-viewer/config/prefs.json */
+    private static final Path PREFS_PATH = Paths.get(System.getProperty("user.home"), ".k8s-log-viewer", "config", "prefs.json");
 
     /** 判断是否首次运行（偏好文件不存在） */
     public static boolean isFirstRun() {

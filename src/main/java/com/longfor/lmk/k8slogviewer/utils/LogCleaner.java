@@ -26,6 +26,7 @@ import java.util.stream.Stream;
 public final class LogCleaner {
 
     private static final Logger log = LoggerFactory.getLogger(LogCleaner.class);
+    private static final Path LOGS_DIR = Paths.get(System.getProperty("user.home"), ".k8s-log-viewer", "logs");
     private static final Pattern LOGBACK_LOG_PATTERN = Pattern.compile("k8s-log-viewer\\.(\\d{4}-\\d{2}-\\d{2})\\.log");
 
     private LogCleaner() {
@@ -49,7 +50,7 @@ public final class LogCleaner {
      * 清理 logback 应用日志
      */
     private static void cleanLogbackLogs(int retentionDays) {
-        Path logsDir = Paths.get("logs");
+        Path logsDir = LOGS_DIR;
         if (!Files.exists(logsDir)) return;
 
         LocalDate cutoffDate = LocalDate.now().minusDays(retentionDays);
@@ -75,7 +76,7 @@ public final class LogCleaner {
      * 清理 Pod 日志缓存目录
      */
     private static void cleanPodLogCache(int retentionDays) {
-        Path podLogRoot = Paths.get("logs/k8s_log_viewer");
+        Path podLogRoot = LOGS_DIR.resolve("k8s_log_viewer");
         if (!Files.exists(podLogRoot)) return;
 
         Instant cutoffInstant = Instant.now().minus(retentionDays, ChronoUnit.DAYS);

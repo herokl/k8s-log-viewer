@@ -24,7 +24,7 @@ import static com.longfor.lmk.k8slogviewer.utils.CommonUtils.parseSearchKeywords
 public class PodLogFileManager {
 
     private static final Logger log = LoggerFactory.getLogger(PodLogFileManager.class);
-    private static final String LOG_ROOT = Paths.get("logs") + "/k8s_log_viewer";
+    private static final String LOG_ROOT = Paths.get(System.getProperty("user.home"), ".k8s-log-viewer", "logs").resolve("k8s_log_viewer").toString();
 
     // 单例引用，供 LogCleaner 判断当前正在写入的文件
     private static volatile PodLogFileManager instance;

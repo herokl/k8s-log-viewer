@@ -6,7 +6,6 @@ import com.longfor.lmk.k8slogviewer.utils.CommonUtils;
 import com.longfor.lmk.k8slogviewer.utils.ExecutorManager;
 import com.longfor.lmk.k8slogviewer.utils.LogStyleUtil;
 import javafx.application.Platform;
-import javafx.geometry.Bounds;
 import javafx.scene.control.Label;
 import org.fxmisc.flowless.VirtualizedScrollPane;
 import org.fxmisc.richtext.CodeArea;
@@ -324,19 +323,6 @@ public class DiskSearchEngine {
             logArea.moveTo(localLine, 0);
         }
         logArea.requestFollowCaret();
-
-        // 基于光标像素位置精确居中
-        Platform.runLater(() -> {
-            logArea.getCaretBounds().ifPresent(bounds -> {
-                VirtualizedScrollPane<CodeArea> scrollPane = logScrollPaneSupplier != null ? logScrollPaneSupplier.get() : null;
-                if (scrollPane == null) return;
-                Bounds caretSceneBounds = logArea.localToScene(bounds);
-                double caretCenterY = caretSceneBounds.getCenterY();
-                double viewportCenterY = scrollPane.localToScene(0, scrollPane.getHeight() / 2).getY();
-                double delta = caretCenterY - viewportCenterY;
-                scrollPane.scrollYBy(delta);
-            });
-        });
     }
 
     // ==================== 增量更新 ====================
