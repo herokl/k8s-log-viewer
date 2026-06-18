@@ -56,8 +56,11 @@ public class K8sLogViewerController {
     // ==================== FXML 组件 ====================
 
     @FXML public ProgressIndicator loadingIndicator;
-    @FXML public VBox logAreaContainer;
+    @FXML public StackPane logAreaContainer;
+    @FXML public VBox logAreaWrapper;
     @FXML public CodeArea headerArea;
+    @FXML private VBox headerAreaWrapper;
+    @FXML private Button headerCollapseButton;
     @FXML private TreeView<String> treeView;
     @FXML private CodeArea logArea;
     @FXML private TextField searchField;
@@ -103,6 +106,7 @@ public class K8sLogViewerController {
     // ==================== 控制器自有状态 ====================
 
     private boolean isTreePaneVisible = true;
+    private boolean isHeaderAreaVisible = false;
     private volatile boolean isNsReloading = false;  // 命名空间切换刷新树期间，跳过 Pod 日志查询
     private VirtualizedScrollPane<CodeArea> logScrollPane;
 
@@ -178,7 +182,7 @@ public class K8sLogViewerController {
         VirtualizedScrollPane<CodeArea> scrollPane = logStreamManager.initCodeArea();
         logScrollPane = scrollPane;
         VBox.setVgrow(scrollPane, Priority.ALWAYS);
-        logAreaContainer.getChildren().add(scrollPane);
+        logAreaWrapper.getChildren().add(scrollPane);
 
         // 换行按钮默认选中
         wrapButton.setSelected(true);
@@ -216,6 +220,11 @@ public class K8sLogViewerController {
 
         // 初始化折叠标签位置
         setupCollapseTab();
+
+        // 置顶日志区域默认收起
+        headerArea.setVisible(false);
+        headerArea.setManaged(false);
+        headerCollapseButton.getStyleClass().add("header-collapsed");
 
         // 绑定树选择事件
         treeView.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
@@ -923,6 +932,9 @@ public class K8sLogViewerController {
         return false;
     }
 
+    /** 当前选中的搜索关键字（null 表示无选中，导航时优先跳转此关键字的匹配位置） */
+    private String selectedSearchKeyword = null;
+
     private void addSearchTag(String keyword) {
         int index = tagContainer.getChildren().size();
         String colorClass = "search-tag-" + (index % SEARCH_HIGHLIGHT_COLORS);
@@ -938,28 +950,60 @@ public class K8sLogViewerController {
         tooltip.setShowDuration(Duration.seconds(300));
         tooltip.setStyle("-fx-background-color: #1a3a5c; -fx-text-fill: #e0e8f0; -fx-padding: 8 12; -fx-background-radius: 4; -fx-border-color: #3a7abd; -fx-border-radius: 4; -fx-font-size: 12px;");
         tagLabel.setTooltip(tooltip);
+
+        HBox tagBox = new HBox(2, tagLabel);
+        tagBox.getStyleClass().add("search-tag-box");
+        tagBox.setUserData(keyword);
+
+        // 单击选中标签，双击复制关键字
         tagLabel.setOnMouseClicked(e -> {
-            ClipboardContent content = new ClipboardContent();
-            content.putString(keyword);
-            Clipboard.getSystemClipboard().setContent(content);
-            showAutoHideToast(tagLabel);
+            if (e.getClickCount() == 1) {
+                // 单击：选中/取消选中此标签
+                selectSearchTag(tagBox, keyword);
+            } else if (e.getClickCount() == 2) {
+                // 双击：复制关键字到剪贴板
+                ClipboardContent content = new ClipboardContent();
+                content.putString(keyword);
+                Clipboard.getSystemClipboard().setContent(content);
+                showAutoHideToast(tagLabel);
+            }
             e.consume();
         });
 
         Button removeBtn = new Button("×");
         removeBtn.getStyleClass().add("search-tag-remove");
         removeBtn.setOnMouseClicked(e -> {
-            tagContainer.getChildren().remove(tagLabel.getParent());
+            // 如果删除的是选中的标签，清除选中状态
+            if (keyword.equals(selectedSearchKeyword)) {
+                selectedSearchKeyword = null;
+                diskSearchEngine.setSelectedKeyword(null);
+            }
+            tagContainer.getChildren().remove(tagBox);
             refreshTagColors();
             onSearchTagsChanged();
             e.consume();
         });
 
-        HBox tagBox = new HBox(2, tagLabel, removeBtn);
-        tagBox.getStyleClass().add("search-tag-box");
-        tagBox.setUserData(keyword);
+        tagBox.getChildren().add(removeBtn);
+
+        // 如果是第一个标签，自动选中
+        if (tagContainer.getChildren().isEmpty()) {
+            selectSearchTag(tagBox, keyword);
+        }
 
         tagContainer.getChildren().add(tagBox);
+    }
+
+    /** 选中某个搜索标签（取消其他标签的选中状态） */
+    private void selectSearchTag(HBox tagBox, String keyword) {
+        // 取消所有标签的选中样式
+        for (var node : tagContainer.getChildren()) {
+            node.getStyleClass().remove("search-tag-box-selected");
+        }
+        // 选中当前标签
+        tagBox.getStyleClass().add("search-tag-box-selected");
+        selectedSearchKeyword = keyword;
+        diskSearchEngine.setSelectedKeyword(keyword);
     }
 
     private void refreshTagColors() {
@@ -1012,14 +1056,23 @@ public class K8sLogViewerController {
     private void findNext() {
         String keyword = buildSearchKeywordFromTags();
         if (keyword.isEmpty()) return;
-        diskSearchEngine.findNext();
+        if (diskSearchEngine.getMatchCount() == 0) {
+            // 搜索尚未完成或无结果，强制重新搜索（完成后自动跳转首个匹配）
+            diskSearchEngine.searchDiskInBackground(keyword, true, true, true);
+        } else {
+            diskSearchEngine.findNext();
+        }
     }
 
     @FXML
     private void findPrev() {
         String keyword = buildSearchKeywordFromTags();
         if (keyword.isEmpty()) return;
-        diskSearchEngine.findPrev();
+        if (diskSearchEngine.getMatchCount() == 0) {
+            diskSearchEngine.searchDiskInBackground(keyword, true, true, true);
+        } else {
+            diskSearchEngine.findPrev();
+        }
     }
 
     @FXML
@@ -1034,6 +1087,7 @@ public class K8sLogViewerController {
         } else {
             inlineSearchField.clear();
             tagContainer.getChildren().clear();
+            selectedSearchKeyword = null;
             diskSearchEngine.clearSearch();
         }
     }
@@ -1153,6 +1207,21 @@ public class K8sLogViewerController {
     @FXML
     public void collapseAllOnClick(MouseEvent mouseEvent) {
         treeViewManager.collapseAll();
+    }
+
+    @FXML
+    private void toggleHeaderArea() {
+        if (isHeaderAreaVisible) {
+            headerArea.setVisible(false);
+            headerArea.setManaged(false);
+            headerCollapseButton.getStyleClass().add("header-collapsed");
+            isHeaderAreaVisible = false;
+        } else {
+            headerArea.setVisible(true);
+            headerArea.setManaged(true);
+            headerCollapseButton.getStyleClass().remove("header-collapsed");
+            isHeaderAreaVisible = true;
+        }
     }
 
     @FXML

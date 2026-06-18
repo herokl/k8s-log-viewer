@@ -124,7 +124,7 @@ public class LogStreamManager {
      * 返回创建的 VirtualizedScrollPane，由调用方加入布局。
      */
     public VirtualizedScrollPane<CodeArea> initCodeArea() {
-        headerArea.setEditable(false);
+        headerArea.setEditable(true);
         logArea.setEditable(false);
         logArea.setParagraphGraphicFactory(this::createLineNumberLabel);
         headerArea.setWrapText(true);
@@ -410,12 +410,7 @@ public class LogStreamManager {
                 viewEndLine = startLine + renderEnd;
                 refreshLineNumbers();
 
-                // 通知回调（搜索跳转到目标位置）：先完成高亮和定位
-                if (onLoaded != null) {
-                    onLoaded.run();
-                }
-
-                // 后台静默补齐剩余行（先补前面 prepend，再补后面 append）
+                // 后台静默补齐剩余行（先补前面 prepend，再补后面 append），完成后才定位
                 if (renderStart > 0 || renderEnd < allLines.size()) {
                     com.longfor.lmk.k8slogviewer.utils.ExecutorManager.submit(() ->
                             Platform.runLater(() -> {
@@ -433,11 +428,18 @@ public class LogStreamManager {
                                 }
                                 refreshLineNumbers();
 
-                                // 补齐完成后重新应用搜索高亮（prepend/append 改变了内容和偏移）
+                                // 补齐后再通知回调（搜索跳转到目标位置），此时内容已是最终状态
+                                if (onLoaded != null) {
+                                    onLoaded.run();
+                                }
+
                                 loadingHistory = false;
                             })
                     );
                 } else {
+                    if (onLoaded != null) {
+                        onLoaded.run();
+                    }
                     loadingHistory = false;
                 }
             });
@@ -496,7 +498,6 @@ public class LogStreamManager {
                 viewStartLine = 0;
                 viewEndLine = initialEnd;
                 refreshLineNumbers();
-                loadingHistory = false;
                 logArea.moveTo(0, 0);
                 logArea.requestFollowCaret();
 
@@ -508,8 +509,11 @@ public class LogStreamManager {
                                 LogStyleUtil.appendBatch(logArea, remaining, null);
                                 viewEndLine = allLines.size();
                                 refreshLineNumbers();
+                                loadingHistory = false;
                             })
                     );
+                } else {
+                    loadingHistory = false;
                 }
             });
         });

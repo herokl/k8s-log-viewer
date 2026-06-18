@@ -90,14 +90,23 @@
                                 styleClass="settings-button"/>
                     </HBox>
                 </VBox>
-                <!-- 置顶日志区域 -->
-                <CodeArea fx:id="headerArea" editable="false" maxHeight="50"
-                          styleClass="log-header"/>
-                <!-- 日志显示区域容器 -->
-                <VBox fx:id="logAreaContainer" VBox.vgrow="ALWAYS">
-                    <!-- 日志显示区域（运行时被 VirtualizedScrollPane 包装） -->
-                    <CodeArea fx:id="logArea" editable="false" styleClass="log-area"/>
+                <!-- 置顶日志区域（可折叠） -->
+                <VBox fx:id="headerAreaWrapper" spacing="0">
+                    <CodeArea fx:id="headerArea" editable="true" maxHeight="80"
+                              styleClass="log-header"/>
+                    <HBox alignment="CENTER">
+                        <Button fx:id="headerCollapseButton" styleClass="header-collapse-btn"
+                                onMouseClicked="#toggleHeaderArea"/>
+                    </HBox>
                 </VBox>
+                <!-- 日志显示区域容器（StackPane 用于叠加中心线） -->
+                <StackPane fx:id="logAreaContainer" VBox.vgrow="ALWAYS" styleClass="log-area-stack">
+                    <VBox fx:id="logAreaWrapper" VBox.vgrow="ALWAYS">
+                        <!-- 日志显示区域（运行时被 VirtualizedScrollPane 包装） -->
+                        <CodeArea fx:id="logArea" editable="false" styleClass="log-area"/>
+                    </VBox>
+                    <Region styleClass="center-line-marker" visible="false"/>
+                </StackPane>
             </VBox>
         </SplitPane>
         <Button fx:id="collapseTab" styleClass="collapse-tab" onMouseClicked="#toggleTreePane"/>

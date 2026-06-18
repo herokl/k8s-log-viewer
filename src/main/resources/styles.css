@@ -282,6 +282,32 @@
     -fx-font-size: 12px;
 }
 
+/* 置顶日志区域折叠按钮 — 半圆风格，居中 */
+.header-collapse-btn {
+    -fx-shape: "M0,22 A22,14 0 0,0 44,22 Z";   /* 向下半圆 */
+    -fx-background-color: rgba(180, 180, 180, 0.4);
+    -fx-min-height: 14;
+    -fx-pref-height: 14;
+    -fx-max-height: 14;
+    -fx-min-width: 44;
+    -fx-pref-width: 44;
+    -fx-max-width: 44;
+    -fx-padding: 0;
+    -fx-alignment: CENTER;
+    -fx-content-display: CENTER;
+    -fx-cursor: hand;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+}
+
+.header-collapse-btn:hover {
+    -fx-background-color: rgba(50, 108, 229, 0.6);
+}
+
+.header-collapse-btn.header-collapsed {
+    -fx-shape: "M0,14 A22,14 0 0,1 44,14 Z";   /* 向上半圆 */
+}
+
 .plain-text {
     -fx-fill: #E0E0E0;
     -fx-font-size: 12px;
@@ -318,9 +344,33 @@
     -fx-font-size: 12px;
 }
 
-.search-highlight-current {
+.search-highlight-current-0 {
+    -fx-fill: #1E1E1E;
+    -rtfx-background-color: #FFC107;
+    -fx-font-size: 12px;
+}
+
+.search-highlight-current-1 {
+    -fx-fill: #1E1E1E;
+    -rtfx-background-color: #00ACC1;
+    -fx-font-size: 12px;
+}
+
+.search-highlight-current-2 {
     -fx-fill: #FFFFFF;
-    -rtfx-background-color: #FF6D00;
+    -rtfx-background-color: #8E24AA;
+    -fx-font-size: 12px;
+}
+
+.search-highlight-current-3 {
+    -fx-fill: #1E1E1E;
+    -rtfx-background-color: #2E7D32;
+    -fx-font-size: 12px;
+}
+
+.search-highlight-current-4 {
+    -fx-fill: #FFFFFF;
+    -rtfx-background-color: #E64A19;
     -fx-font-size: 12px;
 }
 
@@ -481,6 +531,16 @@
 
 .search-tag-box:hover {
     -fx-background-color: #E0E0E0;
+}
+
+.search-tag-box-selected {
+    -fx-background-color: #D0E8FF;
+    -fx-border-color: #3a7abd;
+    -fx-border-width: 1.5px;
+    -fx-border-radius: 10px;
+}
+.search-tag-box-selected:hover {
+    -fx-background-color: #B8D8FA;
 }
 
 .search-tag {
@@ -1332,4 +1392,16 @@
     -fx-background-color: #FFFFFF;
     -fx-border-color: transparent;
     -fx-cell-size: 38;
+}
+
+/* ==================== 日志区域中心线 ==================== */
+.log-area-stack {
+    -fx-padding: 0;
+}
+.center-line-marker {
+    -fx-pref-height: 2;
+    -fx-max-height: 2;
+    -fx-min-height: 2;
+    -fx-background-color: rgba(50, 108, 229, 0.35);
+    -fx-border-width: 0;
 }
